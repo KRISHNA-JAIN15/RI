@@ -36,3 +36,20 @@ class Critic(nn.Module):
 
     def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
         return self.net(torch.cat([state, action], dim=-1))
+
+
+def make_actor(state_dim: int, action_dim: int, cfg: dict) -> nn.Module:
+    """Build the actor. ``cfg['encoder']``: 'mlp' (paper) or 'set' (C6, see SetEncoder)."""
+    enc = str(cfg.get("encoder", "mlp"))
+    hidden = list(cfg.get("hidden_sizes", [128, 128]))
+    if enc == "mlp":
+        return Actor(state_dim, action_dim, hidden)
+    raise ValueError(f"unknown encoder {enc}")
+
+
+def make_critic(state_dim: int, action_dim: int, cfg: dict) -> nn.Module:
+    enc = str(cfg.get("encoder", "mlp"))
+    hidden = list(cfg.get("hidden_sizes", [128, 128]))
+    if enc == "mlp":
+        return Critic(state_dim, action_dim, hidden)
+    raise ValueError(f"unknown encoder {enc}")

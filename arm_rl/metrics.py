@@ -16,6 +16,7 @@ class EpisodeResult:
     collided: bool = False
     steps: int = 0
     episode_return: float = 0.0
+    min_clearance: float = float("nan")
 
 
 def summarize(results: list[EpisodeResult], name: str, successful_only: bool = True) -> dict:
@@ -49,6 +50,8 @@ def summarize(results: list[EpisodeResult], name: str, successful_only: bool = T
         "collision_rate_percent": 100.0 * sum(r.collided for r in results) / max(n, 1),
         "mean_steps": float(np.mean([r.steps for r in results])) if n else float("nan"),
         "mean_return": float(np.mean([r.episode_return for r in results])) if n else float("nan"),
+        "min_clearance_m": float(np.nanmean([r.min_clearance for r in results])) if n else float("nan"),
+        "timeout_rate_percent": 100.0 * sum((not r.success) and (not r.collided) for r in results) / max(n, 1),
     }
 
 

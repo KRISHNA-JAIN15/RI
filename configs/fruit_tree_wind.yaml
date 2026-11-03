@@ -59,6 +59,12 @@ env:
   - 5
   normalize_angles: false
   include_velocities: true
+method:
+  label: DDPG (paper)
+  algo: ddpg
+  encoder: mlp
+  plugins: []
+
 ddpg:
   hidden_sizes:
   - 128

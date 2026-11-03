@@ -14,7 +14,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from arm_rl.networks import Actor, Critic
+from arm_rl.networks import make_actor, make_critic
 from arm_rl.replay_buffer import ReplayBuffer
 
 
@@ -31,8 +31,8 @@ class DDPGAgent:
         hidden = list(cfg.get("hidden_sizes", [128, 128]))
 
         torch.manual_seed(seed)
-        self.actor = Actor(state_dim, action_dim, hidden).to(self.device)
-        self.critic = Critic(state_dim, action_dim, hidden).to(self.device)
+        self.actor = make_actor(state_dim, action_dim, cfg).to(self.device)
+        self.critic = make_critic(state_dim, action_dim, cfg).to(self.device)
         self.actor_target = copy.deepcopy(self.actor)
         self.critic_target = copy.deepcopy(self.critic)
         for p in list(self.actor_target.parameters()) + list(self.critic_target.parameters()):

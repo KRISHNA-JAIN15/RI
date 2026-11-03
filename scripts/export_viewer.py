@@ -16,7 +16,8 @@ from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from arm_rl.ddpg import DDPGAgent  # noqa: E402
+from arm_rl.agents import make_agent  # noqa: E402
+from arm_rl.plugins import load_plugins  # noqa: E402
 from arm_rl.env import ArmPathPlanningEnv  # noqa: E402
 from arm_rl.export import export_checkpoint, viewer_scenes, write_manifest  # noqa: E402
 from arm_rl.utils import load_config  # noqa: E402
@@ -36,7 +37,8 @@ def main():
     env = ArmPathPlanningEnv(cfg["arm"], cfg["scene"], cfg["env"])
     env.reset(seed=0)
     scenes = viewer_scenes(env, n)
-    agent = DDPGAgent(env.state_dim, env.action_space.shape[0], cfg["ddpg"], seed=0)
+    agent = make_agent(env.state_dim, env.action_space.shape[0], cfg, seed=0, env=env)
+    plugins = load_plugins(cfg, env, agent, phase="eval")
     out = run / "viewer"
     entries = []
     if args.random_baseline:
@@ -46,7 +48,7 @@ def main():
         ep = int(re.search(r"ep(\d+)", ck.name).group(1))
         agent.load(ck)
         agent.actor.eval()
-        entries.append(export_checkpoint(env, agent, scenes, ep, out))
+        entries.append(export_checkpoint(env, agent, scenes, ep, out, plugins=plugins))
     write_manifest(out, run.name, env.arm.link_radius, entries, run / "train_log.csv", done=True, backend=env.backend.name, reach=env.arm.reach)
     print(f"{len(entries)} checkpoints -> {out}")
 

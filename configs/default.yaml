@@ -47,6 +47,13 @@ env:
   monitored_links: [1, 2, 3, 4, 5]   # [paper] Sl has 5 direction vectors (base pedestal excluded) -> 27-D state
   normalize_angles: false       # [assumed] feed Sa in radians (true: radians / pi)
 
+# Research extensions (docs/research_directions.md). Empty = the paper's method.
+method:
+  label: DDPG (paper)
+  algo: ddpg                    # ddpg | td3
+  encoder: mlp                  # mlp | set
+  plugins: []                   # e.g. [shield, apf, her, obl, curriculum]
+
 ddpg:
   hidden_sizes: [128, 128]      # [paper] two fully connected layers of 128 neurons
   actor_lr: 0.00001             # [paper]

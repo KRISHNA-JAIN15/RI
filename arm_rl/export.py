@@ -53,7 +53,7 @@ def _closest_point_on_link(env, origins, link: int, obs: int, direction: np.ndar
     return bp
 
 
-def rollout_episode(env: ArmPathPlanningEnv, agent: DDPGAgent | None, scene: Scene, rng: np.random.Generator | None = None) -> dict:
+def rollout_episode(env: ArmPathPlanningEnv, agent: DDPGAgent | None, scene: Scene, rng: np.random.Generator | None = None, plugins: list | None = None) -> dict:
     """Run one deterministic episode and record everything the viewer draws."""
     obs, info = env.reset(options={"scene": scene})
     frames = []
@@ -90,6 +90,8 @@ def rollout_episode(env: ArmPathPlanningEnv, agent: DDPGAgent | None, scene: Sce
     frame(0.0, False, bool(info["reached"]))
     while True:
         action = agent.act(obs, 0.0) if agent is not None else env.action_space.sample()
+        for p in plugins or []:
+            action = p.transform_action(obs, action, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
         ret += reward
         frame(reward, info["collision"], info["reached"])
@@ -116,9 +118,9 @@ def rollout_episode(env: ArmPathPlanningEnv, agent: DDPGAgent | None, scene: Sce
     }
 
 
-def export_checkpoint(env: ArmPathPlanningEnv, agent: DDPGAgent | None, scenes: list[Scene], episode: int, out_dir: Path) -> dict:
+def export_checkpoint(env: ArmPathPlanningEnv, agent: DDPGAgent | None, scenes: list[Scene], episode: int, out_dir: Path, plugins: list | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
-    episodes = [rollout_episode(env, agent, sc) for sc in scenes]
+    episodes = [rollout_episode(env, agent, sc, plugins=plugins) for sc in scenes]
     payload = {"episode_trained": int(episode), "episodes": episodes}
     fname = f"ckpt_{episode:06d}.json"
     (out_dir / fname).write_text(json.dumps(payload, separators=(",", ":")))

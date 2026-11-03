@@ -126,6 +126,17 @@ class ArmPathPlanningEnv(gym.Env):
         if self.include_velocities:
             self.state_dim += 3 * n_links + 3
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(self.state_dim,), dtype=np.float32)
+        # slices of the flat state vector (used by HER, APF, the set encoder, the shield)
+        o = 0
+        self.obs_layout = {"n_links": n_links, "n_joints": self.arm.n_joints}
+        for key, size in [("sl", 3 * n_links), ("sa", self.arm.n_joints), ("se", 3), ("st", 3)]:
+            self.obs_layout[key] = (o, o + size)
+            o += size
+        if self.include_velocities:
+            for key, size in [("vl", 3 * n_links), ("vt", 3)]:
+                self.obs_layout[key] = (o, o + size)
+                o += size
+        assert o == self.state_dim
         self.action_space = spaces.Box(-1.0, 1.0, shape=(self.arm.n_joints,), dtype=np.float32)
 
         self.rng = np.random.default_rng()

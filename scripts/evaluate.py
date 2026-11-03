@@ -19,7 +19,8 @@ from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from arm_rl.ddpg import DDPGAgent  # noqa: E402
+from arm_rl.agents import make_agent  # noqa: E402
+from arm_rl.plugins import load_plugins  # noqa: E402
 from arm_rl.env import ArmPathPlanningEnv  # noqa: E402
 from arm_rl.metrics import PAPER_TABLE_I, EpisodeResult, format_table, summarize  # noqa: E402
 from arm_rl.rrt import RRTPlanner  # noqa: E402
@@ -29,7 +30,7 @@ from arm_rl.visualize import plot_ee_path, render_scene  # noqa: E402
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--config", default="configs/default.yaml")
+    p.add_argument("--config", default=None, help="defaults to <checkpoint dir>/config.yaml")
     p.add_argument("--checkpoint", required=True)
     p.add_argument("--episodes", type=int, default=None)
     p.add_argument("--seed", type=int, default=12345, help="evaluation seed (scenes are shared by both planners)")
@@ -40,21 +41,25 @@ def parse_args():
     return p.parse_args()
 
 
-def run_ddpg_episode(env: ArmPathPlanningEnv, agent: DDPGAgent, scene) -> tuple[EpisodeResult, np.ndarray]:
+def run_ddpg_episode(env: ArmPathPlanningEnv, agent, scene, plugins: list | None = None) -> tuple[EpisodeResult, np.ndarray]:
     obs, info = env.reset(options={"scene": scene})
     infer_time = 0.0
     ep_return = 0.0
+    min_clear = float("inf")
     while True:
         t0 = time.perf_counter()
         action = agent.act(obs, 0.0)
+        for p in plugins or []:
+            action = p.transform_action(obs, action, deterministic=True)
         infer_time += time.perf_counter() - t0
         obs, reward, terminated, truncated, info = env.step(action)
         ep_return += reward
+        min_clear = min(min_clear, env.min_obstacle_clearance())
         if terminated or truncated:
             break
     collided = info["n_collisions"] > 0
     success = bool(info["reached"]) and not collided
-    res = EpisodeResult(success, info["ee_path_length"], infer_time * 1000.0, info["distance"], collided, info["step"], ep_return)
+    res = EpisodeResult(success, info["ee_path_length"], infer_time * 1000.0, info["distance"], collided, info["step"], ep_return, min_clear)
     return res, np.asarray(env.ee_history)
 
 
@@ -74,7 +79,7 @@ def execute_path(env: ArmPathPlanningEnv, scene, path: list[np.ndarray]) -> dict
 
 def main():
     args = parse_args()
-    cfg = load_config(args.config)
+    cfg = load_config(args.config or Path(args.checkpoint).parent / "config.yaml")
     n = int(args.episodes or cfg["eval"]["episodes"])
     n_rrt = int(args.rrt_episodes or n)
     out = Path(args.out or Path(args.checkpoint).parent / "eval")
@@ -83,9 +88,10 @@ def main():
     torch.set_num_threads(1)
 
     env = ArmPathPlanningEnv(cfg["arm"], cfg["scene"], cfg["env"])
-    agent = DDPGAgent(env.state_dim, env.action_space.shape[0], cfg["ddpg"], device=pick_device(), seed=args.seed)
+    agent = make_agent(env.state_dim, env.action_space.shape[0], cfg, device=pick_device(), seed=args.seed, env=env)
     agent.load(args.checkpoint)
     agent.actor.eval()
+    plugins = load_plugins(cfg, env, agent, phase="eval")
 
     # Same scenes for both planners.
     scene_rng = np.random.default_rng(args.seed)
@@ -95,13 +101,13 @@ def main():
     ddpg_results = []
     figs_done = 0
     for i in tqdm(range(n), desc="DDPG eval", dynamic_ncols=True):
-        res, ee_hist = run_ddpg_episode(env, agent, scenes[i])
+        res, ee_hist = run_ddpg_episode(env, agent, scenes[i], plugins)
         ddpg_results.append(res)
         if res.success and figs_done < args.n_figures:
             plot_ee_path(ee_hist, scenes[i].target, out / f"fig5_ddpg_path_{figs_done}.png", f"DDPG round {i}")
             render_scene(env.arm, scenes[i], env.q, ee_hist, f"DDPG round {i}", out / f"scene_ddpg_{figs_done}.png")
             figs_done += 1
-    rows = [summarize(ddpg_results, "DDPG (ours)")]
+    rows = [summarize(ddpg_results, cfg.get("method", {}).get("label", "DDPG (ours)"))]
     write_json([asdict(r) for r in ddpg_results], out / "ddpg_episodes.json")
 
     # ---------------- RRT

@@ -32,6 +32,12 @@ env:
   normalize_angles: false
   include_velocities: true      # Sl velocities + target velocity -> 45-D state
 
+method:
+  label: DDPG (paper)
+  algo: ddpg
+  encoder: mlp
+  plugins: []
+
 ddpg:
   hidden_sizes: [128, 128]
   actor_lr: 0.00001
