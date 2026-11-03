@@ -276,6 +276,71 @@ def fig_cost(agg, bench, out: Path):
     plt.close(fig)
 
 
+def fig_curves_all(rows, bench, out: Path, key="success"):
+    """One panel per world, shared legend below (paper Fig.)."""
+    scenes = [sc for sc in bench["scenes"] if any(r["scene"] == sc and "curve" in r for r in rows)]
+    fig, axes = plt.subplots(1, len(scenes), figsize=(3.4 * len(scenes), 3.3), sharey=True)
+    axes = np.atleast_1d(axes)
+    handles = {}
+    for ax, sc in zip(axes, scenes):
+        style(ax)
+        for i, var in enumerate(bench["variants"]):
+            if bench["variants"][var].get("eval_only"):
+                continue
+            curves = [r["curve"] for r in rows if r["scene"] == sc and r["variant"] == var and "curve" in r]
+            if not curves:
+                continue
+            n = min(len(c["episode"]) for c in curves)
+            x = np.array(curves[0]["episode"][:n])
+            y = np.array([c[key][:n] for c in curves]) * (100 if key == "success" else 1)
+            m = y.mean(0)
+            h = 1.96 * y.std(0, ddof=1) / math.sqrt(len(y)) if len(y) > 1 else np.zeros_like(m)
+            col = PALETTE[i % len(PALETTE)]
+            (ln,) = ax.plot(x, m, color=col, linewidth=1.8)
+            ax.fill_between(x, m - h, m + h, color=col, alpha=0.10, linewidth=0)
+            handles[bench["variants"][var]["label"]] = ln
+        ax.set_title(bench["scenes"][sc]["label"], fontsize=9, loc="left", color=TEXT)
+        ax.set_xlabel("training rounds")
+    axes[0].set_ylabel("success (%) per 100 rounds" if key == "success" else "return per 100 rounds")
+    fig.legend(handles.values(), handles.keys(), fontsize=7, frameon=False, ncol=min(5, len(handles)), loc="lower center", bbox_to_anchor=(0.5, -0.02))
+    fig.tight_layout(rect=(0, 0.14, 1, 1))
+    fig.savefig(out.with_suffix(".png"), dpi=200)
+    fig.savefig(out.with_suffix(".pdf"))
+    plt.close(fig)
+
+
+def fig_stratified(rows, bench, out: Path, variants=("paper_ddpg", "td3", "td3_her_apf", "td3_her_apf_shield", "shield_eval_1cm")):
+    """Success per TDA-difficulty quartile, grouped bars, one panel per world."""
+    scenes = [sc for sc in bench["scenes"] if any(r["scene"] == sc and "stratified" in r for r in rows)]
+    if not scenes:
+        return
+    fig, axes = plt.subplots(1, len(scenes), figsize=(3.4 * len(scenes), 3.0), sharey=True)
+    axes = np.atleast_1d(axes)
+    for ax, sc in zip(axes, scenes):
+        style(ax)
+        vs = [v for v in variants if any(r["scene"] == sc and r["variant"] == v and "stratified" in r for r in rows)]
+        width = 0.8 / max(len(vs), 1)
+        for k, v in enumerate(vs):
+            strat = [r["stratified"] for r in rows if r["scene"] == sc and r["variant"] == v and "stratified" in r]
+            bins = [st["algorithms"]["ddpg"]["bins"] for st in strat if "ddpg" in st.get("algorithms", {})]
+            nb = min(len(b) for b in bins)
+            succ = [100 * np.mean([b[i]["success_rate"] for b in bins]) for i in range(nb)]
+            xs = np.arange(nb) + (k - (len(vs) - 1) / 2) * width
+            ax.bar(xs, succ, width=width * 0.92, color=PALETTE[list(bench["variants"]).index(v) % len(PALETTE)], label=bench["variants"][v]["label"])
+        ax.set_xticks(np.arange(4))
+        ax.set_xticklabels([f"Q{i + 1}" for i in range(4)])
+        ax.set_xlabel("scene difficulty quartile (τ)")
+        ax.set_title(bench["scenes"][sc]["label"], fontsize=9, loc="left", color=TEXT)
+        ax.set_ylim(0, 105)
+    axes[0].set_ylabel("success (%)")
+    h, l = axes[0].get_legend_handles_labels()
+    fig.legend(h, l, fontsize=7, frameon=False, ncol=min(5, len(l)), loc="lower center", bbox_to_anchor=(0.5, -0.02))
+    fig.tight_layout(rect=(0, 0.14, 1, 1))
+    fig.savefig(out.with_suffix(".png"), dpi=200)
+    fig.savefig(out.with_suffix(".pdf"))
+    plt.close(fig)
+
+
 # ------------------------------------------------------------------ stratified
 def md_stratified(rows, bench, sc):
     """Per-variant success per TDA-difficulty bin, averaged over seeds (format of scripts/stratify.py)."""
@@ -343,6 +408,9 @@ def main():
         fig_curves(rows, bench, sc, out / "figures" / f"returns_{sc}", key="return")
     fig_ladder(agg, bench, out / "figures" / "ladder")
     fig_cost(agg, bench, out / "figures" / "cost")
+    fig_curves_all(rows, bench, out / "figures" / "curves_all")
+    fig_curves_all(rows, bench, out / "figures" / "returns_all", key="return")
+    fig_stratified(rows, bench, out / "figures" / "stratified")
     # plugin-level stats (shield activations etc.)
     md += ["## Plugin statistics (mean over seeds and scenes)", "", "| variant | plugin | stat | value |", "|---|---|---|---|"]
     stats = defaultdict(list)

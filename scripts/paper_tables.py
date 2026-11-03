@@ -106,8 +106,38 @@ def main():
     L += ["\\bottomrule", "\\end{tabular}", "}", "\\end{table}"]
     (out / "cost.tex").write_text("\n".join(L))
 
+    # ---------------- gains.tex: relative effect of each component vs the rung it builds on
+    L = ["\\begin{table*}[t]", "\\centering",
+         "\\caption{Effect of each component relative to the rung it builds on (mean over seeds): change in success $\\Delta S$ and collision rate $\\Delta C$ in percentage points, "
+         "change in training wall time $\\Delta W$ in \\%, and inference time per test round as a multiple of the base rung ($\\times T$). "
+         "Test-time rows add the component to the trained DDPG policy without retraining.}",
+         "\\label{tab:gains}", "\\footnotesize", "\\setlength{\\tabcolsep}{3.5pt}",
+         "\\begin{tabular}{ll" + "rrrr" * len(scenes) + "}", "\\toprule",
+         "Component & vs. & " + " & ".join(f"\\multicolumn{{4}}{{c}}{{{SCENE_SHORT.get(s, s)}}}" for s in scenes) + " \\\\",
+         " & & " + " & ".join("$\\Delta S$ & $\\Delta C$ & $\\Delta W$ & $\\times T$" for _ in scenes) + " \\\\", "\\midrule"]
+    G = []
+    for v in variants:
+        bv = bench["variants"][v].get("base")
+        if not bv:
+            continue
+        cells = []
+        for sc in scenes:
+            a, b = agg.get((sc, v)), agg.get((sc, bv))
+            if not a or not b:
+                cells += ["--"] * 4
+                continue
+            dS, dC = a["S"][0] - b["S"][0], a["collision"][0] - b["collision"][0]
+            eo = bench["variants"][v].get("eval_only")
+            dW = "--" if eo else f"{100 * (a['train_wall_s'][0] / b['train_wall_s'][0] - 1):+.0f}"
+            xT = a["T_ms"][0] / b["T_ms"][0]
+            cells += [f"{dS:+.1f}", f"{dC:+.1f}", dW, f"{xT:.1f}"]
+            G += [macro(f"gS{sc}{v}", f"{dS:+.1f}"), macro(f"gC{sc}{v}", f"{dC:+.1f}"), macro(f"gW{sc}{v}", dW if dW == "--" else dW.replace("+", "+")), macro(f"gT{sc}{v}", f"{xT:.1f}")]
+        L.append(f"{SHORT.get(v, v)} & {SHORT.get(bv, bv)} & " + " & ".join(cells) + " \\\\")
+    L += ["\\bottomrule", "\\end{tabular}", "\\end{table*}"]
+    (out / "gains.tex").write_text("\n".join(L))
+
     # ---------------- numbers.tex
-    M = []
+    M = list(G)
     for s in scenes:
         base = agg.get((s, "paper_ddpg"))
         if base:
