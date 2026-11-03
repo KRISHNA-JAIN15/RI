@@ -216,6 +216,8 @@ def fig_curves(rows, bench, sc, out: Path, key="success"):
         ax.plot(x, m * (100 if key == "success" else 1), color=col, linewidth=2, label=bench["variants"][var]["label"])
         ax.fill_between(x, (m - h) * (100 if key == "success" else 1), (m + h) * (100 if key == "success" else 1), color=col, alpha=0.12, linewidth=0)
     ax.set_xlabel("training rounds")
+    if key == "success":
+        ax.set_ylim(-2, 102)  # CI bands of a 0/1 statistic can leave [0, 100]
     ax.set_ylabel("success rate (%) per 100 rounds" if key == "success" else "average return per 100 rounds")
     ax.set_title(bench["scenes"][sc]["label"], fontsize=10, color=TEXT, loc="left")
     ax.legend(fontsize=6.5, frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.22))

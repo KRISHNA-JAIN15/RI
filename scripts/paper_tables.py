@@ -64,7 +64,7 @@ def main():
     L = ["\\begin{table*}[t]", "\\centering",
          "\\caption{Test performance over 1000 rounds per seed (mean$\\pm$95\\,\\% CI over seeds): success rate $S$ and collision rate $C$ in \\%. "
          "Rows are the ablation ladder; each rung adds one component to the rung above it. RRT plans on the $t{=}0$ snapshot and its path is executed in the moving world.}",
-         "\\label{tab:results}", "\\small", f"\\begin{{tabular}}{{{cols}}}", "\\toprule",
+         "\\label{tab:results}", "\\footnotesize", f"\\begin{{tabular}}{{{cols}}}", "\\toprule",
          "Method & " + " & ".join(f"\\multicolumn{{2}}{{c}}{{{SCENE_SHORT.get(s, s)}}}" for s in scenes) + " \\\\",
          " & " + " & ".join("$S$ & $C$" for _ in scenes) + " \\\\", "\\midrule"]
     rrt_row = None

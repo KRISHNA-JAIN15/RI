@@ -232,3 +232,28 @@ obvious for the follow-up paper (`docs/research_directions.md`): the 14.8 % coll
 in the industrial cell calls for a safety shield (C1), and RRT needs a re-planning variant
 to be a fair baseline in dynamic scenes. Per-run reports: `runs/*/RESULTS.md`; MuJoCo video
 of the trained UR5e policy: `runs/ur5e_industrial/demo.gif`.
+
+## Benchmark
+
+`configs/benchmark.yaml` defines the ablation ladder (paper DDPG → TD3 → HER → APF shaping →
+APF prior → CBF shield → set encoder → TDA curriculum, plus APF-only, test-time shield and
+CEM-RL variants) over three scenes (static fruit tree, fruit tree in wind, UR5e MuJoCo cell),
+3 seeds, 5000 training rounds and 1000 test rounds. `scripts/benchmark.py` runs it with
+parallel, resumable workers; `scripts/stratify.py` adds per-run difficulty stratification;
+`scripts/report_benchmark.py` aggregates everything.
+
+* `runs/bench/REPORT.md`: main tables, ablation ladder with per-step deltas and costs,
+  stratified results, plugin statistics.
+* `runs/bench/SUMMARY.md`: the matrix actually run (which variants on which scenes), the
+  headline numbers, what helped/hurt/cost, failed or dropped variants, compute, and a
+  reviewer's assessment.
+* `paper/tables/*.tex` and `paper/figures/*.{png,pdf}`: booktabs tables, learning curves,
+  ladder and cost figures used by `paper/main.tex`.
+* `runs/bench/results.json`: every (scene, variant, seed) record.
+
+```bash
+python scripts/benchmark.py --dry-run          # list jobs
+python scripts/benchmark.py --workers 8        # run / resume the matrix
+for d in runs/bench/*/*/seed*/eval; do python scripts/stratify.py --eval-dir $d --config $d/../config.yaml --seed 12345 --bins 4; done
+python scripts/report_benchmark.py             # REPORT.md, paper/tables, paper/figures
+```
