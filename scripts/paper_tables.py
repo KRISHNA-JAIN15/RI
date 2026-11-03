@@ -69,7 +69,7 @@ def main():
     L = ["\\begin{table*}[t]", "\\centering",
          "\\caption{Test performance over 1000 rounds per seed (mean$\\pm$95\\,\\% CI over seeds): success rate $S$ and collision rate $C$ in \\%. "
          "Ladder rows add one component to the row above. Open-loop RRT plans on the $t{=}0$ snapshot and its path is executed in the moving world; closed-loop RRT re-plans every 10 steps.}",
-         "\\label{tab:results}", "\\footnotesize", f"\\begin{{tabular}}{{{cols}}}", "\\toprule",
+         "\\label{tab:results}", "\\scriptsize", f"\\begin{{tabular}}{{{cols}}}", "\\toprule",
          "Method & " + " & ".join(f"\\multicolumn{{2}}{{c}}{{{SCENE_SHORT.get(s, s)}}}" for s in scenes) + " \\\\",
          " & " + " & ".join("$S$ & $C$" for _ in scenes) + " \\\\", "\\midrule"]
     def row(v):

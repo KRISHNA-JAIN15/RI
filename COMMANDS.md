@@ -135,7 +135,24 @@ python -c "from pypdf import PdfReader; print(len(PdfReader('paper/main.pdf').pa
 cp paper/main.pdf runs/bench/paper_draft.pdf
 ```
 
-`paper/main.tex` reads `paper/tables/numbers.tex` (macros like `\Sstaticbase`); re-run step 6 before compiling after any new result.
+`paper/main.tex` follows the IEEE conference template (`paper/sample.tex`, class `paper/IEEEtran.cls` = `paper/sample.cls`), reads
+`paper/tables/numbers.tex` (macros like `\Sstaticbase`) and carries its reference list inline as `\bibitem`s, as the template does.
+Re-run step 6 before compiling after any new result. After editing `paper/refs.bib`, regenerate the inline list:
+
+```bash
+cd paper && python - <<'EOF2'
+import re; t=open('main.tex').read()
+b0=t.index('\\begin{thebibliography}'); b1=t.index('\\end{thebibliography}')+len('\\end{thebibliography}')
+open('main_bib.tex','w').write(t[:b0]+'\\bibliographystyle{IEEEtran}\n\\bibliography{refs}\n'+t[b1:])
+EOF2
+tectonic -X compile --keep-intermediates main_bib.tex && python - <<'EOF2'
+t=open('main.tex').read(); b=open('main_bib.bbl').read()
+b=b[b.index('\\begin{thebibliography}'):b.index('\\end{thebibliography}')+len('\\end{thebibliography}')]
+b0=t.index('\\begin{thebibliography}'); b1=t.index('\\end{thebibliography}')+len('\\end{thebibliography}')
+open('main.tex','w').write(t[:b0]+b+t[b1:])
+EOF2
+rm -f main_bib.*; cd ..
+```
 
 ## 8. Where things live
 
