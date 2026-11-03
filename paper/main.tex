@@ -161,17 +161,27 @@
 
 \begin{document}
 
-\title{Safe and Sample-Efficient Deep Reinforcement Learning for Robotic-Arm Path Planning in Dynamic Multi-Obstacle Environments}
+\title{Safe and Sample-Efficient Deep Reinforcement Learning for Robotic-Arm Path Planning in Dynamic Multi-Obstacle Environments
+% \thanks{Identify applicable funding agency here. If none, delete this.}
+}
 
-\author{\IEEEauthorblockN{Krishna Jain}
-\IEEEauthorblockA{\textit{Affiliation (to be completed)} \\
-\textit{City, Country} \\
-email@domain}}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Krishna Jain}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+% \and
+% \IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
+% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+% \textit{name of organization (of Aff.)}\\
+% City, Country \\
+% email address or ORCID}
+}
 
 \maketitle
 
 \begin{abstract}
-Deep reinforcement learning (DRL) planners for six-axis arms infer in microseconds where sampling planners need seconds, but published methods are trained in static worlds, offer no collision guarantee, and depend on unreported learner details. We start from a recent closest-point state representation for DDPG, reproduce it in an analytical simulator and in MuJoCo with a UR5e, and find that the stated reward makes the critic diverge unless the discount is lowered and collisions terminate the round. We then show that the same closest-point vectors that form the state are exactly the quantities a control-barrier-function (CBF) shield and an artificial-potential-field (APF) prior need, and build an ablation ladder of eight components (TD3, hindsight relabelling, opposition-based augmentation, APF prior and shaping, CBF shield, set encoder, population learner, persistent-homology curriculum) evaluated with paired per-scene tests on three worlds: the original static fruit tree, the tree swinging in wind with a swaying fruit, and a UR5e picking from a moving conveyor among a sweeping gantry and a passing vehicle. The shield, applied to the unchanged baseline policy at test time, removes every collision on both trees and cuts them from \Curebase{} to \Cureshieldevalcm{}\,\% on the cell for about \shieldms{}\,ms per activated step; on the original paper's budget this yields \Sstaticshieldevalcmk{}\,\% success with zero collisions on its own task, against the 87.3\,\% it reported. The APF prior turns a 56\,\% baseline into \Suretdherapf{}\,\% on the cell, and APF with the shield and no learning reaches \Sureapfshieldeval{}\,\%. The learned stack reaches a 90\,\% success rate 4$\times$, 2$\times$ and from never to 200 rounds faster than the baseline on the three worlds, and closed-loop RRT matches its success only on the static tree at a thousand times the inference cost. Hindsight relabelling, opposition-based augmentation, a population learner, a set encoder and a topological curriculum do not pay at equal budget, and we quantify why. Code, scene presets, simulator and a browser-based 3-D replay tool are released.
+Deep reinforcement learning (DRL) planners for six-axis arms infer in microseconds where sampling planners need seconds, but published methods are trained in static worlds, offer no collision guarantee, and depend on unreported learner details. We start from a recent closest-point state representation for DDPG, reproduce it in an analytical simulator and in MuJoCo with a UR5e, and find that the stated reward makes the critic diverge unless the discount is lowered and collisions terminate the round. We then show that the same closest-point vectors that form the state are exactly the quantities a control-barrier-function (CBF) shield and an artificial-potential-field (APF) prior need, and build an ablation ladder of eight components (TD3, hindsight relabelling, opposition-based augmentation, APF prior and shaping, CBF shield, set encoder, population learner, persistent-homology curriculum) evaluated with paired per-scene tests on three worlds: the original static fruit tree, the tree swinging in wind with a swaying fruit, and a UR5e picking from a moving conveyor among a sweeping gantry and a passing vehicle. The shield, applied to the unchanged baseline policy at test time, removes every collision on both trees and cuts them from \Curebase{} to \Cureshieldevalcm{} percent on the cell for about \shieldms{} ms per activated step; on the original paper's budget this yields \Sstaticshieldevalcmk{} percent success with zero collisions on its own task, against the 87.3 percent it reported. The APF prior turns a 56 percent baseline into \Suretdherapf{} percent on the cell, and APF with the shield and no learning reaches \Sureapfshieldeval{} percent. The learned stack reaches a 90 percent success rate 4 times, 2 times and from never to 200 rounds faster than the baseline on the three worlds, and closed-loop RRT matches its success only on the static tree at a thousand times the inference cost. Hindsight relabelling, opposition-based augmentation, a population learner, a set encoder and a topological curriculum do not pay at equal budget, and we quantify why. Code, scene presets, simulator and a browser-based 3-D replay tool are released.
 \end{abstract}
 
 \begin{IEEEkeywords}
