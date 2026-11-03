@@ -81,6 +81,9 @@ def collect(bench_dir: Path) -> list[dict]:
         rrt = [r for r in t1 if r["algorithm"].startswith("RRT (ours)")]
         if rrt:
             rec["rrt"] = rrt[0]
+        rrt2 = [r for r in t1 if r["algorithm"].startswith("RRT re-plan")]
+        if rrt2:
+            rec["rrt_replan"] = rrt2[0]
         if (d / "train_log.csv").exists():
             rec["curve"] = read_curve(d / "train_log.csv")
         if (d / "eval" / "stratified.json").exists():
@@ -132,6 +135,9 @@ def aggregate(rows, bench):
             rrts = [r["rrt"] for r in rs if "rrt" in r]
             if rrts:
                 a["rrt"] = {k: ci95([x[k] for x in rrts]) for k in ["S_percent", "L_avg_m", "T_avg_ms", "E_avg_m", "collision_rate_percent"] if k in rrts[0]}
+            rrts2 = [r["rrt_replan"] for r in rs if "rrt_replan" in r]
+            if rrts2:
+                a["rrt_replan"] = {k: ci95([x[k] for x in rrts2]) for k in ["S_percent", "L_avg_m", "T_avg_ms", "E_avg_m", "collision_rate_percent"] if k in rrts2[0]}
             agg[(sc, var)] = a
     return agg
 

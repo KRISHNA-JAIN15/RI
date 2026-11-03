@@ -12,6 +12,7 @@ for d in runs/bench/*/*/seed*/eval; do
 done
 python scripts/report_benchmark.py --out paper
 python scripts/paper_tables.py
+python scripts/paired_stats.py
 (cd paper && tectonic -X compile main.tex 2>&1 | grep -E "^error" || true)
 python -c "from pypdf import PdfReader; print('pages:', len(PdfReader('paper/main.pdf').pages))"
 cp paper/main.pdf runs/bench/paper_draft.pdf

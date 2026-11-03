@@ -66,6 +66,8 @@ def build_jobs(bench: dict, scenes, variants, seeds, episodes, eval_episodes, ou
         sc_cfg = bench["scenes"][sc]["config"]
         for var in variants:
             v = bench["variants"][var]
+            if v.get("scenes") and sc not in v["scenes"]:
+                continue
             var_seeds = [sd for sd in seeds if sd in v["seeds"]] if v.get("seeds") else seeds
             for seed in var_seeds:
                 d = out_root / sc / var / f"seed{seed}"
@@ -76,13 +78,13 @@ def build_jobs(bench: dict, scenes, variants, seeds, episodes, eval_episodes, ou
                     # config = source config + this variant's overrides, written at run time by a tiny helper
                     cfg_path = d / "config.yaml"
                     cmd = [PY, "scripts/benchmark.py", "--_eval-only", str(src), str(d), json.dumps(v.get("set") or {}),
-                           str(eval_episodes), str(bench["eval_seed"])]
+                           str(eval_episodes), str(bench["eval_seed"]), str(int(v.get("rrt_replan", 0)))]
                     jobs[eval_name] = Job(eval_name, cmd, d, d / "eval" / "table1.json", deps=[f"train:{sc}/{v['eval_only']}/s{seed}"])
                     continue
                 script = v.get("script", "scripts/train.py")
                 sets = dict(v.get("set") or {})
                 sets.update((v.get("scene_set") or {}).get(sc) or {})  # per-scene overrides
-                cmd = [PY, script, "--config", sc_cfg, "--out", str(d), "--seed", str(seed), "--episodes", str(episodes),
+                cmd = [PY, script, "--config", sc_cfg, "--out", str(d), "--seed", str(seed), "--episodes", str(int(v.get("episodes", episodes))),
                        "--threads", "1", "--quiet", "--set", "train.viewer_episodes=0"] + set_args(sets)
                 jobs[train_name] = Job(train_name, cmd, d, d / "train_summary.json")
                 ecmd = [PY, "scripts/evaluate.py", "--checkpoint", str(d / "ddpg_final.pt"), "--episodes", str(eval_episodes),
@@ -98,7 +100,7 @@ def build_jobs(bench: dict, scenes, variants, seeds, episodes, eval_episodes, ou
     return list(jobs.values())
 
 
-def eval_only(src: str, dst: str, sets_json: str, eval_episodes: str, eval_seed: str) -> int:
+def eval_only(src: str, dst: str, sets_json: str, eval_episodes: str, eval_seed: str, rrt_replan: str = "0") -> int:
     """Helper mode: evaluate an existing checkpoint under a modified method config."""
     src, dst = Path(src), Path(dst)
     dst.mkdir(parents=True, exist_ok=True)
@@ -114,7 +116,11 @@ def eval_only(src: str, dst: str, sets_json: str, eval_episodes: str, eval_seed:
     shutil.copy(src / "train_summary.json", dst / "train_summary.json")
     shutil.copy(src / "train_log.csv", dst / "train_log.csv")
     cmd = [PY, "scripts/evaluate.py", "--config", str(dst / "config.yaml"), "--checkpoint", str(dst / "ddpg_final.pt"),
-           "--episodes", eval_episodes, "--seed", eval_seed, "--n-figures", "0", "--out", str(dst / "eval"), "--no-rrt"]
+           "--episodes", eval_episodes, "--seed", eval_seed, "--n-figures", "0", "--out", str(dst / "eval")]
+    if int(rrt_replan) > 0:
+        cmd += ["--rrt-replan", str(int(rrt_replan))]
+    else:
+        cmd.append("--no-rrt")
     if SAVE_PATHS:
         cmd.append("--save-paths")
     return subprocess.call(cmd, cwd=ROOT)

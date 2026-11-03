@@ -4,7 +4,7 @@
 # env steps, extra sim steps, plugin time, inference time) to the step that added it.
 
 out_dir: runs/bench
-seeds: [0, 1, 2]
+seeds: [0, 1, 2, 3, 4]          # core rungs use all five; side branches restrict via `seeds:`
 train_episodes: 5000
 eval_episodes: 1000
 eval_seed: 12345
@@ -23,11 +23,13 @@ variants:
     rrt: true                       # also evaluate RRT on this variant's scenes
     set: {method.label: "DDPG (paper)"}
   apf_only:
+    seeds: [0, 1, 2]
     label: "APF controller only"
     base: null
     eval_only: paper_ddpg           # no training; re-uses the paper_ddpg checkpoint of the same seed
     set: {method.plugins: "[apf]", method.apf.prior_only: true, method.label: "APF only"}
   shield_eval:
+    seeds: [0, 1, 2]
     label: "DDPG (paper) + CBF shield at test time (d_safe 2 cm)"
     base: paper_ddpg
     eval_only: paper_ddpg
@@ -47,6 +49,7 @@ variants:
     base: td3
     set: {method.algo: td3, method.plugins: "[her]", method.label: "TD3+HER"}
   td3_her_obl:
+    seeds: [0, 1, 2]
     label: "+ OBL"
     base: td3_her
     set: {method.algo: td3, method.plugins: "[her,obl]", method.label: "TD3+HER+OBL"}
@@ -83,13 +86,77 @@ variants:
       wind: {env.max_obstacles: 8}
       ur5e: {env.max_obstacles: 24}
   curriculum_mlp:
+    seeds: [0, 1, 2]
     ladder: false                   # excluded from the ladder figure (static-only rung)
     label: "+ TDA curriculum (on MLP full stack)"
     base: td3_her_apf_shield
     set: {method.algo: td3, method.plugins: "[her,apf,shield,curriculum]", method.apf.prior: true, method.apf.shaping: true, method.label: "full + curriculum"}
   cem_rl:
+    seeds: [0, 1, 2]
+    scenes: [static]
     ladder: false                   # excluded from the ladder figure (static-only rung)
     label: "CEM-RL (population) on TD3+HER"
     base: td3_her
     script: scripts/train_cemrl.py
     set: {method.algo: td3, method.plugins: "[her]", method.label: "CEM-RL"}
+
+  # ---------------- additions for the camera-ready: closed-loop RRT, HER ablation, no-learning APF+shield, paper budget, CEM sweep
+  rrt_replan:
+    label: "RRT re-planning every 10 steps"
+    base: null
+    eval_only: paper_ddpg
+    rrt_replan: 10
+    ladder: false
+    seeds: [0, 1, 2]
+    set: {method.label: "DDPG (paper) [rrt-replan run]"}
+  her_k1:
+    label: "+ HER (k = 1)"
+    base: td3
+    ladder: false
+    seeds: [0, 1, 2]
+    set: {method.algo: td3, method.plugins: "[her]", method.her.k: 1, method.label: "TD3+HER(k=1)"}
+  apf_shield_eval:
+    label: "APF controller + CBF shield (no learning)"
+    base: apf_only
+    eval_only: paper_ddpg
+    ladder: false
+    seeds: [0, 1, 2]
+    set: {method.plugins: "[apf,shield]", method.apf.prior_only: true, method.apf.shaping: false, method.shield.d_safe: 0.01, method.label: "APF + shield"}
+  paper_ddpg_10k:
+    label: "DDPG (paper), 10 000 rounds"
+    base: paper_ddpg
+    ladder: false
+    episodes: 10000
+    seeds: [0, 1, 2]
+    set: {method.label: "DDPG (paper) 10k"}
+  full_10k:
+    label: "TD3+HER+APF+shield, 10 000 rounds"
+    base: td3_her_apf_shield
+    ladder: false
+    episodes: 10000
+    seeds: [0, 1, 2]
+    set: {method.algo: td3, method.plugins: "[her,apf,shield]", method.apf.prior: true, method.apf.shaping: true, method.label: "full 10k"}
+  cem_s4:
+    label: "CEM-RL, sigma_init 1e-4"
+    base: cem_rl
+    ladder: false
+    scenes: [static]
+    seeds: [0]
+    script: scripts/train_cemrl.py
+    set: {method.algo: td3, method.plugins: "[her]", method.cem.sigma_init: 0.0001, method.label: "CEM-RL s1e-4"}
+  cem_lr:
+    label: "CEM-RL, actor lr 1e-3"
+    base: cem_rl
+    ladder: false
+    scenes: [static]
+    seeds: [0]
+    script: scripts/train_cemrl.py
+    set: {method.algo: td3, method.plugins: "[her]", ddpg.actor_lr: 0.001, method.label: "CEM-RL lr1e-3"}
+  cem_s4_lr:
+    label: "CEM-RL, sigma_init 1e-4 + actor lr 1e-3"
+    base: cem_rl
+    ladder: false
+    scenes: [static]
+    seeds: [0]
+    script: scripts/train_cemrl.py
+    set: {method.algo: td3, method.plugins: "[her]", method.cem.sigma_init: 0.0001, ddpg.actor_lr: 0.001, method.label: "CEM-RL s1e-4 lr1e-3"}

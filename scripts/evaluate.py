@@ -37,6 +37,7 @@ def parse_args():
     p.add_argument("--out", default=None)
     p.add_argument("--no-rrt", action="store_true")
     p.add_argument("--rrt-episodes", type=int, default=None, help="RRT rounds (defaults to --episodes)")
+    p.add_argument("--rrt-replan", type=int, default=0, help="if > 0, RRT re-plans every k steps on the current snapshot (closed-loop baseline)")
     p.add_argument("--n-figures", type=int, default=3, help="number of Fig. 5 style trajectory plots")
     p.add_argument("--save-paths", action="store_true", help="write paths.npz (per-episode EE trajectories, NaN-padded, and targets) to --out")
     return p.parse_args()
@@ -85,6 +86,36 @@ def execute_path(env: ArmPathPlanningEnv, scene, path: list[np.ndarray]) -> dict
     collided = info["n_collisions"] > 0
     return {"success": bool(info["reached"]) and not collided, "collided": collided, "path_length": info["ee_path_length"],
             "final_error": info["distance"], "steps": info["step"]}
+
+
+def execute_replanning(env: ArmPathPlanningEnv, scene, planner, k: int) -> dict:
+    """Closed-loop RRT: plan on the current snapshot, execute k waypoints, re-plan, until the
+    target is touched, a collision occurs or the step budget is exhausted."""
+    obs, info = env.reset(options={"scene": scene})
+    plan_ms, n_plans, n_fail = 0.0, 0, 0
+    done = False
+    while not done and env.step_count < env.max_steps:
+        r = planner.plan(env.q.copy(), env.scene.target.copy())
+        plan_ms += r.time_ms
+        n_plans += 1
+        if not r.success:
+            n_fail += 1
+            # hold position for k steps (world keeps moving) and try again
+            for _ in range(k):
+                obs, rew, term, trunc, info = env.step(np.zeros(env.arm.n_joints))
+                if term or trunc:
+                    done = True
+                    break
+            continue
+        for q_next in r.path[1:k + 1]:
+            a = (q_next - env.q) / env.max_delta
+            obs, rew, term, trunc, info = env.step(np.clip(a, -1.0, 1.0))
+            if term or trunc:
+                done = True
+                break
+    collided = info["n_collisions"] > 0
+    return {"success": bool(info["reached"]) and not collided, "collided": collided, "path_length": info["ee_path_length"],
+            "final_error": info["distance"], "steps": info["step"], "plan_ms": plan_ms, "n_plans": n_plans, "n_fail": n_fail}
 
 
 def main():
@@ -141,6 +172,13 @@ def main():
                 plot_ee_path(r.ee_path, scenes[i].target, out / f"fig5_rrt_path_{i}.png", f"RRT round {i}")
         rows.append(summarize(rrt_results, "RRT (ours)"))
         write_json([asdict(r) for r in rrt_results], out / "rrt_episodes.json")
+        if args.rrt_replan > 0:
+            replan_results = []
+            for i in tqdm(range(n_rrt), desc=f"RRT re-plan/{args.rrt_replan}", dynamic_ncols=True):
+                ex = execute_replanning(env, scenes[i], planner, args.rrt_replan)
+                replan_results.append(EpisodeResult(ex["success"], ex["path_length"], ex["plan_ms"], ex["final_error"], ex["collided"], ex["steps"], 0.0))
+            rows.append(summarize(replan_results, f"RRT re-plan every {args.rrt_replan} (ours)"))
+            write_json([asdict(r) for r in replan_results], out / "rrt_replan_episodes.json")
 
     if args.save_paths:
         arrays = {"targets": np.asarray([sc.target for sc in scenes]), "seed": np.array(args.seed)}

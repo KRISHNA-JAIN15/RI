@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import math
 import sys
+
+import numpy as np
 from pathlib import Path
 
 import yaml
@@ -27,6 +29,9 @@ SHORT = {
     "td3_her_apfshape": "TD3+HER+APF$_\\Phi$", "td3_her_apf": "TD3+HER+APF", "td3_her_apf_shield": "TD3+HER+APF+shield",
     "full_set": "\\quad + set encoder", "full_curriculum": "\\quad + set + curriculum", "curriculum_mlp": "\\quad + curriculum (MLP)",
     "cem_rl": "CEM-RL (TD3+HER)",
+    "rrt_replan": "RRT re-planning / 10 steps", "her_k1": "TD3+HER ($k{=}1$)", "apf_shield_eval": "APF + shield (no learning)",
+    "paper_ddpg_10k": "DDPG (paper), 10k rounds", "full_10k": "TD3+HER+APF+shield, 10k rounds",
+    "cem_s4": "CEM-RL $\\sigma_0{=}10^{-4}$", "cem_lr": "CEM-RL lr$_a{=}10^{-3}$", "cem_s4_lr": "CEM-RL $\\sigma_0{=}10^{-4}$, lr$_a{=}10^{-3}$",
 }
 SCENE_SHORT = {"static": "Static tree", "wind": "Tree in wind", "ur5e": "UR5e cell"}
 
@@ -69,6 +74,8 @@ def main():
          " & " + " & ".join("$S$ & $C$" for _ in scenes) + " \\\\", "\\midrule"]
     rrt_row = None
     for v in variants:
+        if v == "rrt_replan":
+            continue
         cells = []
         for s in scenes:
             a = agg.get((s, v))
@@ -82,6 +89,12 @@ def main():
             rrt_row = "RRT (executed) & " + " & ".join(rr) + " \\\\"
     if rrt_row:
         L.insert(L.index("\\midrule") + 1, rrt_row)
+    rr2 = []
+    for s_ in scenes:
+        a = agg.get((s_, "rrt_replan"))
+        rr2 += [pm(a["rrt_replan"]["S_percent"]), pm(a["rrt_replan"]["collision_rate_percent"])] if a and "rrt_replan" in a else ["--", "--"]
+    if any(c != "--" for c in rr2):
+        L.insert(L.index("\\midrule") + 2, "RRT re-planning / 10 steps & " + " & ".join(rr2) + " \\\\")
     L += ["\\bottomrule", "\\end{tabular}", "\\end{table*}"]
     (out / "results_all.tex").write_text("\n".join(L))
 
@@ -105,6 +118,41 @@ def main():
         L.append(f"{SHORT.get(v, v)} & {dS} & {wall} & {env_steps} & {extra} & {plug} & {a['T_ms'][0]:.2f} \\\\")
     L += ["\\bottomrule", "\\end{tabular}", "}", "\\end{table}"]
     (out / "cost.tex").write_text("\n".join(L))
+
+    # ---------------- efficiency.tex: sample efficiency, timeouts, clearance, shield statistics
+    L = ["\\begin{table*}[t]", "\\centering",
+         "\\caption{Sample efficiency and safety statistics (mean over seeds). Rounds$\\to$90: training rounds until the 200-round moving success rate first reaches 90\\,\\% (fraction of seeds that reach it in parentheses when below 1); "
+         "timeout = rounds that neither reach nor collide; clearance = mean over rounds of the minimum link--obstacle clearance; act.\\ = fraction of steps on which the shield QP changed the action; QP = mean solve time.}",
+         "\\label{tab:eff}", "\\scriptsize", "\\setlength{\\tabcolsep}{3pt}", "\\begin{tabular}{l" + "rrrrr" * len(scenes) + "}", "\\toprule",
+         "Method & " + " & ".join(f"\\multicolumn{{5}}{{c}}{{{SCENE_SHORT.get(s, s)}}}" for s in scenes) + " \\\\",
+         " & " + " & ".join("rounds$\\to$90 & timeout (\\%) & $L$ (m) & clear.\\ (cm) & act.\\,\\% / QP ms" for _ in scenes) + " \\\\", "\\midrule"]
+    for v in variants:
+        if v == "rrt_replan":
+            continue
+        cells = []
+        for s_ in scenes:
+            a = agg.get((s_, v))
+            if not a:
+                cells += ["--"] * 5
+                continue
+            eo = bench["variants"][v].get("eval_only")
+            if eo or "rounds_to_90" not in a:
+                r90 = "--"
+            elif a.get("reach90_frac", 0) == 0:
+                r90 = "never"
+            else:
+                r90 = f"{a['rounds_to_90'][0]:.0f}" + (f" ({a['reach90_frac']:.2f})" if a.get("reach90_frac", 1) < 1 else "")
+            sh = [r for r in rows if r["scene"] == s_ and r["variant"] == v and "shield" in (r.get("plugins") or {})]
+            if sh:
+                act = 100 * float(np.mean([r["plugins"]["shield"].get("activation_rate", float("nan")) for r in sh]))
+                qp = float(np.mean([r["plugins"]["shield"].get("mean_solve_ms", float("nan")) for r in sh]))
+                shc = f"{act:.0f} / {qp:.2f}"
+            else:
+                shc = "--"
+            cells += [r90, f"{a['timeout'][0]:.1f}", f"{a['L'][0]:.2f}", f"{100 * a['min_clearance'][0]:.1f}", shc]
+        L.append(f"{SHORT.get(v, v)} & " + " & ".join(cells) + " \\\\")
+    L += ["\\bottomrule", "\\end{tabular}", "\\end{table*}"]
+    (out / "efficiency.tex").write_text("\n".join(L))
 
     # ---------------- gains.tex: relative effect of each component vs the rung it builds on
     L = ["\\begin{table*}[t]", "\\centering",
@@ -152,20 +200,30 @@ def main():
             M.append(macro(f"S{s}best", f"{best[0]:.1f}"))
             M.append(macro(f"C{s}best", f"{-best[1]:.1f}"))
             M.append(macro(f"V{s}best", SHORT.get(best[2], best[2])))
-        for v in ["td3_her_apf_shield", "shield_eval", "shield_eval_1cm", "td3_her", "td3", "td3_her_obl", "cem_rl", "apf_only", "full_set", "full_curriculum", "curriculum_mlp", "td3_her_apf"]:
+        rp = agg.get((s, "rrt_replan"))
+        if rp and "rrt_replan" in rp:
+            M += [macro(f"S{s}replan", f"{rp['rrt_replan']['S_percent'][0]:.1f}"), macro(f"C{s}replan", f"{rp['rrt_replan']['collision_rate_percent'][0]:.1f}"), macro(f"T{s}replan", f"{rp['rrt_replan']['T_avg_ms'][0]:.0f}")]
+        for v in ["td3_her_apf_shield", "shield_eval", "shield_eval_1cm", "td3_her", "td3", "td3_her_obl", "cem_rl", "apf_only", "full_set", "full_curriculum", "curriculum_mlp", "td3_her_apf", "td3_her_apfshape",
+                  "her_k1", "apf_shield_eval", "paper_ddpg_10k", "full_10k", "cem_s4", "cem_lr", "cem_s4_lr"]:
             a = agg.get((s, v))
             if a:
                 key = v.replace("_", "")
                 M.append(macro(f"S{s}{key}", f"{a['S'][0]:.1f}"))
                 M.append(macro(f"C{s}{key}", f"{a['collision'][0]:.1f}"))
                 M.append(macro(f"T{s}{key}", f"{a['T_ms'][0]:.2f}"))
+                M.append(macro(f"O{s}{key}", f"{a['timeout'][0]:.1f}"))
+                M.append(macro(f"L{s}{key}", f"{a['L'][0]:.2f}"))
+                M.append(macro(f"N{s}{key}", str(a['n'])))
+                if "rounds_to_90" in a and a.get("reach90_frac", 0) > 0:
+                    M.append(macro(f"R{s}{key}", f"{a['rounds_to_90'][0]:.0f}"))
+                else:
+                    M.append(macro(f"R{s}{key}", "never"))
     used = yaml.safe_load(open(ROOT / args.bench / "matrix_used.yaml")) if (ROOT / args.bench / "matrix_used.yaml").exists() else {}
     M.append(macro("nseeds", str(len(used.get("seeds", [])) or 3)))
     M.append(macro("ntrain", str(used.get("episodes", 5000))))
     M.append(macro("neval", str(used.get("eval_episodes", 1000))))
     shield_stats = [r["plugins"].get("shield", {}) for r in rows if "shield" in (r.get("plugins") or {})]
     if shield_stats:
-        import numpy as np
         M.append(macro("shieldms", f"{np.mean([s.get('mean_solve_ms', float('nan')) for s in shield_stats]):.2f}"))
         M.append(macro("shieldact", f"{100 * np.mean([s.get('activation_rate', float('nan')) for s in shield_stats]):.0f}"))
     (out / "numbers.tex").write_text("\n".join(M) + "\n")
