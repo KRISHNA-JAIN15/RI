@@ -126,9 +126,14 @@ def main():
                 action = agent.act(obs, noise_std)
             else:
                 action = agent.random_action()
+            # Plugins (control prior, safety shield) transform the action before execution. The
+            # replay buffer stores the policy's own action: the transforms are part of the
+            # environment the agent learns in (residual RL / shielded RL formulation).
+            action_exec = action
             for p in plugins:
-                action = p.transform_action(obs, action, deterministic=False)
-            next_obs, reward, terminated, truncated, info = env.step(action)
+                action_exec = p.transform_action(obs, action_exec, deterministic=False)
+            next_obs, reward, terminated, truncated, info = env.step(action_exec)
+            info["action_exec"] = action_exec
             r_train = reward
             for p in plugins:
                 r_train = p.shape_reward(obs, action, r_train, next_obs, terminated, info)

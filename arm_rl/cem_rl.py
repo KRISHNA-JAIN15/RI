@@ -250,9 +250,11 @@ class CEMRLTrainer:
             transitions = []
             while True:
                 action = self._act(obs, noise_std)
+                action_exec = action  # transforms (prior / shield) are part of the environment; store the policy's action
                 for p in plugins:
-                    action = p.transform_action(obs, action, deterministic=False)
-                next_obs, reward, terminated, truncated, info = env.step(action)
+                    action_exec = p.transform_action(obs, action_exec, deterministic=False)
+                next_obs, reward, terminated, truncated, info = env.step(action_exec)
+                info["action_exec"] = action_exec
                 r_train = reward
                 for p in plugins:
                     r_train = p.shape_reward(obs, action, r_train, next_obs, terminated, info)

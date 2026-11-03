@@ -5,7 +5,9 @@ Options under ``method.apf``:
     prior: true          residual control  a_out = clip(a_rl + a_apf, -1, 1)
     prior_only: false    a_out = a_apf (pure APF controller, baseline; a_rl ignored)
     prior_gain: 1.0      max |dq_apf| = prior_gain * env.max_delta
-    k_att, k_rep, rho0, d_switch      APF gains (see arm_rl/apf.py)
+    k_att: 20.0, k_rep: 1e-4, rho0: 0.15, d_switch: 0.1    APF gains (see arm_rl/apf.py)
+        (tuned on configs/default.yaml: pure APF reaches ~50 % of targets with ~4 % collisions;
+        only the ratio k_rep/k_att and the saturation at prior_gain*max_delta matter)
     shaping: true        F = gamma * Phi(s') - Phi(s) added to the training reward
     k_phi, k_phi_rep, shaping_scale   potential gains (Phi(s') = 0 on terminal transitions)
 
@@ -31,8 +33,8 @@ class Plugin(BasePlugin):
         self.prior = bool(c.get("prior", True))
         self.prior_only = bool(c.get("prior_only", False))
         self.prior_gain = float(c.get("prior_gain", 1.0))
-        self.k_att = float(c.get("k_att", 1.0))
-        self.k_rep = float(c.get("k_rep", 0.02))
+        self.k_att = float(c.get("k_att", 20.0))
+        self.k_rep = float(c.get("k_rep", 1e-4))
         self.rho0 = float(c.get("rho0", 0.15))
         self.d_switch = float(c.get("d_switch", 0.1))
         self.shaping = bool(c.get("shaping", True))

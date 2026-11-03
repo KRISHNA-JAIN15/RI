@@ -53,6 +53,9 @@ class SetEncoder(nn.Module):
     of its link index, passed through a per-token MLP (pair_dim + n_links -> 64 -> 64), and pooled
     with multi-head attention against a learned query (padded tokens get -1e9 before the softmax).
     An all-masked set yields a zero embedding. Output: ``(B, set_embed)``.
+
+    Implementation note: ``[token, onehot] @ W`` is computed as ``token @ W_tok + E[link]`` with a
+    learned per-link embedding ``E`` (exactly equivalent, avoids materialising the concatenation).
     """
 
     def __init__(self, obs_layout: dict, set_embed: int = 64, token_hidden: int = 64, n_heads: int = 4):
@@ -78,16 +81,16 @@ class SetEncoder(nn.Module):
         assert token_hidden % n_heads == 0, "token_hidden must be divisible by n_heads"
         self.n_heads = n_heads
         self.head_dim = token_hidden // n_heads
-        self.token_mlp = nn.Sequential(
-            nn.Linear(self.pair_dim + self.n_links, token_hidden), nn.ReLU(),
-            nn.Linear(token_hidden, token_hidden), nn.ReLU(),
-        )
+        self.token_in = nn.Linear(self.pair_dim, token_hidden)
+        self.link_embed = nn.Embedding(self.n_links, token_hidden)  # == the one-hot columns of the first layer
+        self.token_out = nn.Linear(token_hidden, token_hidden)
         self.key = nn.Linear(token_hidden, token_hidden, bias=False)
         self.value = nn.Linear(token_hidden, token_hidden, bias=False)
         self.query = nn.Parameter(torch.randn(n_heads, self.head_dim) / self.head_dim ** 0.5)
         self.out = nn.Linear(token_hidden, set_embed)
         self.set_embed = set_embed
-        self.register_buffer("link_onehot", torch.eye(self.n_links).unsqueeze(1).expand(self.n_links, self.max_obstacles, self.n_links).reshape(-1, self.n_links), persistent=False)
+        # token n = (link n // max_obstacles, obstacle n % max_obstacles)
+        self.register_buffer("link_ids", torch.arange(self.n_links).repeat_interleave(self.max_obstacles), persistent=False)
 
     @property
     def out_dim(self) -> int:
@@ -103,15 +106,15 @@ class SetEncoder(nn.Module):
     def pool(self, tokens: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """Masked attention pooling of ``tokens`` (B, N, pair_dim) with ``mask`` (B, N) in {0, 1}."""
         B, N, _ = tokens.shape
-        onehot = self.link_onehot[:N].unsqueeze(0).expand(B, N, self.n_links)
-        h = self.token_mlp(torch.cat([tokens, onehot], dim=-1))  # (B, N, H*dh)
+        h = torch.relu(self.token_in(tokens) + self.link_embed(self.link_ids[:N]).unsqueeze(0))
+        h = torch.relu(self.token_out(h))  # (B, N, H*dh)
         k = self.key(h).view(B, N, self.n_heads, self.head_dim)
         v = self.value(h).view(B, N, self.n_heads, self.head_dim)
-        scores = torch.einsum("bnhd,hd->bhn", k, self.query) / self.head_dim ** 0.5
+        scores = (k * self.query).sum(-1) / self.head_dim ** 0.5  # (B, N, H)
         valid = mask > 0.5
-        scores = scores.masked_fill(~valid.unsqueeze(1), -1e9)
-        w = torch.softmax(scores, dim=-1)  # (B, H, N); padded tokens get exactly 0 when any token is valid
-        pooled = torch.einsum("bhn,bnhd->bhd", w, v).reshape(B, -1)
+        scores = scores.masked_fill(~valid.unsqueeze(-1), -1e9)
+        w = torch.softmax(scores, dim=1)  # over tokens; padded tokens get exactly 0 when any token is valid
+        pooled = (w.unsqueeze(-1) * v).sum(1).reshape(B, -1)  # (B, H*dh)
         pooled = pooled * valid.any(dim=-1, keepdim=True).to(pooled.dtype)  # empty set -> zeros
         return self.out(pooled)
 

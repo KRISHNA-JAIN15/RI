@@ -126,7 +126,7 @@ class ArmPathPlanningEnv(gym.Env):
         self.dt = float(env_cfg.get("dt", 0.1))  # seconds of scene motion per step
         # C6: permutation-invariant token set over all link-obstacle pairs (see SetEncoder)
         self.all_pairs = bool(env_cfg.get("all_pairs", False))
-        self.max_obstacles = int(env_cfg.get("max_obstacles", 32))
+        self.max_obstacles = int(env_cfg.get("max_obstacles", self.sim_cfg.get("max_obstacles", 32)))  # token slots per link
         self.pair_include_radius = bool(env_cfg.get("pair_include_radius", True))
         self.pair_clearance_cap = float(env_cfg.get("pair_clearance_cap", 2.0))  # clips +inf (MuJoCo distmax) clearances
         self.pair_dim = 3 + 1 + 3 + (1 if self.pair_include_radius else 0)

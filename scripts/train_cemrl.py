@@ -65,7 +65,8 @@ def main():
         cfg["seed"] = args.seed
     cfg.setdefault("method", {})
     cfg["method"]["cem"] = cem_config(cfg)  # record the resolved CEM settings in config.yaml
-    cfg["method"].setdefault("label", "CEM-RL")
+    if not any(o.startswith("method.label=") for o in args.set):
+        cfg["method"]["label"] = f"CEM-RL ({str(cfg['method'].get('algo', 'ddpg')).upper()})"
     seed = int(cfg["seed"])
     set_seed(seed)
     torch.set_num_threads(args.threads)
