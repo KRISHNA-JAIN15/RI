@@ -28,10 +28,15 @@ variants:
     eval_only: paper_ddpg           # no training; re-uses the paper_ddpg checkpoint of the same seed
     set: {method.plugins: "[apf]", method.apf.prior_only: true, method.label: "APF only"}
   shield_eval:
-    label: "DDPG (paper) + CBF shield at test time"
+    label: "DDPG (paper) + CBF shield at test time (d_safe 2 cm)"
     base: paper_ddpg
     eval_only: paper_ddpg
-    set: {method.plugins: "[shield]", method.label: "DDPG + shield (eval)"}
+    set: {method.plugins: "[shield]", method.label: "DDPG + shield (eval, 2 cm)"}
+  shield_eval_1cm:
+    label: "DDPG (paper) + CBF shield at test time (d_safe 1 cm)"
+    base: paper_ddpg
+    eval_only: paper_ddpg
+    set: {method.plugins: "[shield]", method.shield.d_safe: 0.01, method.label: "DDPG + shield (eval, 1 cm)"}
   # ---------------- ablation ladder
   td3:
     label: "+ TD3"

@@ -299,39 +299,41 @@ def path_homotopy_signature(ee_path: np.ndarray, scene, min_radial: float = 1e-3
     """Discrete "which side" signature of an EE path with respect to each obstacle capsule.
 
     For obstacle ``i`` with axis ``q1 -> q2`` (a sphere, ``q1 == q2``, uses the vertical
-    axis through its centre) the path and the straight chord start -> end are projected on
-    the plane perpendicular to the axis, with the axis as origin.  The winding number of
-    the closed loop *path followed by the reversed chord* is
-    ``w_i = (swept_angle(path) - swept_angle(chord)) / 2 pi``, an integer when neither
-    curve passes through the axis.  The signature entry is ``sign(round(w_i))`` in
-    ``{-1, 0, +1}``: ``+1`` = the path goes around the axis counter-clockwise relative to
-    the chord (seen from ``q2`` looking down the axis), ``-1`` = clockwise, ``0`` = the
-    path and the chord are on the same side.  The tuple has one entry per obstacle, in
-    scene order.
+    axis through its centre) the path is projected on the plane perpendicular to the
+    axis, with the axis as origin, and the total signed angle ``theta_i`` it sweeps about
+    the origin is accumulated step by step (each step wrapped to ``(-pi, pi]``, so the
+    sum is well defined for any sampled polyline that does not pass through the axis).
+    The signature entry is ``sign(round(theta_i / pi))`` in ``{-1, 0, +1}``: ``+1`` = the
+    path passes the axis on its counter-clockwise side (seen from ``q2`` looking down the
+    axis, i.e. sweeps at least +pi/2), ``-1`` = clockwise side, ``0`` = the obstacle is
+    not between the start and the end (the path sweeps less than a quarter turn).  The
+    tuple has one entry per obstacle, in scene order.
 
     What this captures and what it does not.
-    * It is exact for homotopy classes in the plane with *point* obstacles, i.e. it treats
-      every capsule as an infinite line (Bhattacharya et al. 2012, "H-signature").  Two
-      paths with different signatures are in different homotopy classes of the complement
-      of those lines.
-    * In 3-D a finite capsule is not an infinite line: a path that passes *over the tip*
-      of a branch is homotopic (in the real free space) to one that passes on either side,
-      yet it receives a definite side label here.  So equal signatures do not prove the
-      same class, and different signatures may be homotopic in 3-D when the detour goes
-      over an end of the capsule.  It is a coarse, reproducible descriptor of the route
-      choice, adequate for "does DDPG take the same route as RRT" style statistics.
-    * The reference is the straight chord, so ``0`` means "same side as the chord", not
-      "did not interact with the obstacle".  Obstacles far from the path always get ``0``.
-    * Partial windings (e.g. the path ends at the target without closing) are rounded;
-      a path that stops on the far side of an obstacle counts as a ``+-1`` if the loop
-      closed by the chord encircles the axis.
+    * For two paths with the *same* start and end (e.g. DDPG and RRT on the same scene),
+      their swept angles about any axis differ by a multiple of ``2 pi``, the multiple
+      being the winding number of the loop "path 1 then path 2 reversed" around that
+      axis (Bhattacharya et al. 2012, H-signature).  Hence **different entries imply
+      different homotopy classes** in the complement of the obstacle *lines*.  Equal
+      entries do not prove the same class (a full extra turn is hidden by the sign), but
+      the policy and the planner never loop fully around a capsule in this task.
+    * Every capsule is treated as an infinite line.  In 3-D a finite capsule is not: a
+      path that passes *over the tip* of a branch is homotopic (in the real free space)
+      to one passing on either side, yet it receives a definite side label here.  So two
+      paths with different signatures may be homotopic in 3-D when the detour goes over
+      an end of the capsule.  It is a coarse, reproducible descriptor of the route
+      choice, adequate for "does DDPG take the same route as RRT" statistics, not a
+      certificate of the 3-D homotopy class.
+    * Across *different* scenes (different targets) the entries are only a descriptor of
+      the route relative to each obstacle, not comparable classes.
     * Points closer than ``min_radial`` to the axis (projected) are dropped to avoid an
       undefined angle; a path that pierces an obstacle is not meaningfully classified.
+    * The threshold ``|theta| >= pi/2`` is a convention: a path that skirts an obstacle
+      sitting beside (not between) its endpoints can fall on either side of it.
     """
     path = np.asarray(ee_path, dtype=np.float64).reshape(-1, 3)
     if len(path) < 2 or scene.n_obstacles == 0:
         return tuple([0] * scene.n_obstacles)
-    chord = np.stack([path[0], path[-1]])
     sig = []
     for i in range(scene.n_obstacles):
         q1, q2 = scene.obs_q1[i], scene.obs_q2[i]
@@ -343,14 +345,10 @@ def path_homotopy_signature(ee_path: np.ndarray, scene, min_radial: float = 1e-3
         e1 = np.cross(axis, helper)
         e1 /= np.linalg.norm(e1)
         e2 = np.cross(axis, e1)
-
-        def proj(p):
-            rel = p - q1[None, :]
-            xy = np.stack([rel @ e1, rel @ e2], axis=1)
-            return xy[np.linalg.norm(xy, axis=1) > min_radial]
-
-        w = (_swept_angle(proj(path)) - _swept_angle(proj(chord))) / (2.0 * np.pi)
-        sig.append(int(np.sign(np.round(w))))
+        rel = path - q1[None, :]
+        xy = np.stack([rel @ e1, rel @ e2], axis=1)
+        xy = xy[np.linalg.norm(xy, axis=1) > min_radial]
+        sig.append(int(np.sign(np.round(_swept_angle(xy) / np.pi))))
     return tuple(sig)
 
 

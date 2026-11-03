@@ -110,8 +110,8 @@ def _osqp_qp(x0: np.ndarray, G: np.ndarray, h: np.ndarray, lb: np.ndarray, ub: n
     hv = h if G.shape[0] else None
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # osqp deprecation notices; qpsolvers warns on 'primal infeasible' (handled below)
-        x = _qps.solve_qp(P, q, Gm, hv, lb=lb, ub=ub, solver="osqp", eps_abs=1e-9, eps_rel=1e-9,
-                          max_iter=int(max(max_iter, 4000)), polishing=False, verbose=False)
+        x = _qps.solve_qp(P, q, Gm, hv, lb=lb, ub=ub, solver="osqp", eps_abs=1e-8, eps_rel=1e-8,
+                          max_iter=int(max(max_iter, 10000)), polishing=False, verbose=False)
     return x
 
 
@@ -132,17 +132,19 @@ def solve_box_qp(x0: np.ndarray, G: np.ndarray, h: np.ndarray, lb: np.ndarray, u
     use_osqp = solver in ("osqp", "qpsolvers") or (solver == "auto" and _HAVE_QPSOLVERS)
     if use_osqp and not _HAVE_QPSOLVERS:
         raise RuntimeError("qpsolvers/osqp not installed; use solver='numpy'")
-    if use_osqp:
-        x = _osqp_qp(x0, G, h, lb, ub, max_iter)
-        if x is None:
-            return None, False
-        x = np.clip(x, lb, ub)  # OSQP satisfies bounds to solver tolerance only
-        viol = float(np.max(G @ x - h)) if G.shape[0] else 0.0
-        return x, viol <= tol
     n = x0.shape[0]
     A = np.vstack([G, np.eye(n), -np.eye(n)])
     b = np.concatenate([h, ub, -lb])
-    x, _, viol = hildreth_qp(x0, A, b, max_iter=max_iter)
+    if use_osqp:
+        x = _osqp_qp(x0, G, h, lb, ub, max_iter)
+        if x is not None:
+            x = np.clip(x, lb, ub)  # OSQP satisfies bounds to solver tolerance only
+            viol = float(np.max(G @ x - h)) if G.shape[0] else 0.0
+            if viol <= tol:
+                return x, True
+        # OSQP gave up (max iterations on a degenerate active set) or reports infeasibility:
+        # confirm with the exact dual method before declaring the problem infeasible.
+    x, _, viol = hildreth_qp(x0, A, b, max_iter=max(max_iter, 5000))
     if viol > tol:
         return None, False
     return np.clip(x, lb, ub), True
@@ -317,10 +319,16 @@ class CBFShield:
         bad = rhs < 0.0  # constraints that cannot be satisfied by standing still
         if not np.any(bad):
             bad = np.ones(len(cons), dtype=bool)
-        # steepest barrier increase for the violated set, scaled to the box
+        # steepest ascent of the violated barriers; take the smallest step along it that
+        # (to first order) restores them, the full box step if none does
         g = -G[bad].sum(axis=0)
         scale = float(np.max(np.abs(g)))
         esc = np.clip(delta * g / scale, lb, ub) if scale > _EPS else np.zeros(self.n)
+        gain = -(G[bad] @ esc)               # predicted barrier increase per unit step
+        need = -rhs[bad]                     # increase required by each violated constraint
+        pos = gain > _EPS
+        sigma = float(np.max(need[pos] / gain[pos])) if np.any(pos) else 1.0
+        esc = esc * float(np.clip(sigma, 0.0, 1.0))
         keep = ~bad
         if np.any(keep):
             x, ok = solve_box_qp(esc, G[keep], rhs[keep], lb, ub, solver=self.solver, max_iter=self.max_iter)
