@@ -30,8 +30,8 @@ SHORT = {
     "full_set": "\\quad + set encoder", "full_curriculum": "\\quad + set + curriculum", "curriculum_mlp": "\\quad + curriculum (MLP)",
     "cem_rl": "CEM-RL (TD3+HER)",
     "rrt_replan": "RRT re-planning / 10 steps", "her_k1": "TD3+HER ($k{=}1$)", "apf_shield_eval": "APF + shield (no learning)",
-    "paper_ddpg_10k": "DDPG (paper), 10k rounds", "full_10k": "TD3+HER+APF+shield, 10k rounds",
-    "cem_s4": "CEM-RL $\\sigma_0{=}10^{-4}$", "cem_lr": "CEM-RL lr$_a{=}10^{-3}$", "cem_s4_lr": "CEM-RL $\\sigma_0{=}10^{-4}$, lr$_a{=}10^{-3}$",
+    "paper_ddpg_10k": "DDPG (paper), 10k rounds", "shield_eval_1cm_10k": "DDPG 10k + shield$_{1\\,\\mathrm{cm}}$ (test)", "full_10k": "TD3+HER+APF+shield, 10k rounds",
+    "cem_s4": "CEM-RL $\\sigma_0{=}10^{-4}$", "cem_lr": "CEM-RL lr$_a{=}10^{-3}$", "cem_s4_lr": "CEM-RL tuned ($\\sigma_0{=}10^{-4}$, lr$_a{=}10^{-3}$)",
 }
 SCENE_SHORT = {"static": "Static tree", "wind": "Tree in wind", "ur5e": "UR5e cell"}
 
@@ -68,33 +68,44 @@ def main():
     cols = "l" + "rr" * len(scenes)
     L = ["\\begin{table*}[t]", "\\centering",
          "\\caption{Test performance over 1000 rounds per seed (mean$\\pm$95\\,\\% CI over seeds): success rate $S$ and collision rate $C$ in \\%. "
-         "Rows are the ablation ladder; each rung adds one component to the rung above it. RRT plans on the $t{=}0$ snapshot and its path is executed in the moving world.}",
+         "Ladder rows add one component to the row above. Open-loop RRT plans on the $t{=}0$ snapshot and its path is executed in the moving world; closed-loop RRT re-plans every 10 steps.}",
          "\\label{tab:results}", "\\footnotesize", f"\\begin{{tabular}}{{{cols}}}", "\\toprule",
          "Method & " + " & ".join(f"\\multicolumn{{2}}{{c}}{{{SCENE_SHORT.get(s, s)}}}" for s in scenes) + " \\\\",
          " & " + " & ".join("$S$ & $C$" for _ in scenes) + " \\\\", "\\midrule"]
-    rrt_row = None
-    for v in variants:
-        if v == "rrt_replan":
-            continue
+    def row(v):
         cells = []
-        for s in scenes:
-            a = agg.get((s, v))
+        for s_ in scenes:
+            a = agg.get((s_, v))
             cells += [pm(a["S"]), pm(a["collision"])] if a else ["--", "--"]
-        L.append(f"{SHORT.get(v, v)} & " + " & ".join(cells) + " \\\\")
-        if v == "paper_ddpg":
-            rr = []
-            for s in scenes:
-                a = agg.get((s, v))
-                rr += [pm(a["rrt"]["S_percent"]), pm(a["rrt"]["collision_rate_percent"])] if a and "rrt" in a else ["--", "--"]
-            rrt_row = "RRT (executed) & " + " & ".join(rr) + " \\\\"
-    if rrt_row:
-        L.insert(L.index("\\midrule") + 1, rrt_row)
-    rr2 = []
+        return f"{SHORT.get(v, v)} & " + " & ".join(cells) + " \\\\"
+    # group 1: planners without learning
+    rr, rr2 = [], []
     for s_ in scenes:
-        a = agg.get((s_, "rrt_replan"))
-        rr2 += [pm(a["rrt_replan"]["S_percent"]), pm(a["rrt_replan"]["collision_rate_percent"])] if a and "rrt_replan" in a else ["--", "--"]
+        a = agg.get((s_, "paper_ddpg"))
+        rr += [pm(a["rrt"]["S_percent"]), pm(a["rrt"]["collision_rate_percent"])] if a and "rrt" in a else ["--", "--"]
+        b = agg.get((s_, "rrt_replan"))
+        rr2 += [pm(b["rrt_replan"]["S_percent"]), pm(b["rrt_replan"]["collision_rate_percent"])] if b and "rrt_replan" in b else ["--", "--"]
+    L.append("\\multicolumn{%d}{l}{\\textit{No learning}} \\\\" % (1 + 2 * len(scenes)))
+    L.append("RRT open-loop (executed) & " + " & ".join(rr) + " \\\\")
     if any(c != "--" for c in rr2):
-        L.insert(L.index("\\midrule") + 2, "RRT re-planning / 10 steps & " + " & ".join(rr2) + " \\\\")
+        L.append("RRT closed-loop (re-plan / 10 steps) & " + " & ".join(rr2) + " \\\\")
+    for v in ["apf_only", "apf_shield_eval"]:
+        if v in variants:
+            L.append(row(v))
+    groups = [
+        ("Baseline and test-time shield (5000 rounds)", ["paper_ddpg", "shield_eval", "shield_eval_1cm"]),
+        ("Ablation ladder (5000 rounds)", ["td3", "td3_her", "td3_her_apfshape", "td3_her_apf", "td3_her_apf_shield", "full_set", "curriculum_mlp"]),
+        ("Side studies (5000 rounds)", ["td3_her_obl", "her_k1", "cem_rl", "cem_s4_lr"]),
+        ("Original paper's budget (10\\,000 rounds, one seed)", ["paper_ddpg_10k", "shield_eval_1cm_10k", "full_10k"]),
+    ]
+    for title, vs in groups:
+        vs = [v for v in vs if v in variants]
+        if not vs:
+            continue
+        L.append("\\midrule")
+        L.append("\\multicolumn{%d}{l}{\\textit{%s}} \\\\" % (1 + 2 * len(scenes), title))
+        for v in vs:
+            L.append(row(v))
     L += ["\\bottomrule", "\\end{tabular}", "\\end{table*}"]
     (out / "results_all.tex").write_text("\n".join(L))
 
@@ -206,6 +217,9 @@ def main():
                 M.append(macro(f"S{s}rrt", f"{base['rrt']['S_percent'][0]:.1f}"))
                 M.append(macro(f"T{s}rrt", f"{base['rrt']['T_avg_ms'][0]:.0f}"))
             M.append(macro(f"T{s}base", f"{base['T_ms'][0]:.2f}"))
+            M.append(macro(f"O{s}base", f"{base['timeout'][0]:.1f}"))
+            M.append(macro(f"L{s}base", f"{base['L'][0]:.2f}"))
+            M.append(macro(f"R{s}base", f"{base['rounds_to_90'][0]:.0f}" if base.get("reach90_frac", 0) > 0 else "never"))
         best = max([(agg[(s, v)]["S"][0], -agg[(s, v)]["collision"][0], v) for v in variants if (s, v) in agg and not bench["variants"][v].get("eval_only")], default=None)
         if best:
             M.append(macro(f"S{s}best", f"{best[0]:.1f}"))
@@ -215,7 +229,7 @@ def main():
         if rp and "rrt_replan" in rp:
             M += [macro(f"S{s}replan", f"{rp['rrt_replan']['S_percent'][0]:.1f}"), macro(f"C{s}replan", f"{rp['rrt_replan']['collision_rate_percent'][0]:.1f}"), macro(f"T{s}replan", f"{rp['rrt_replan']['T_avg_ms'][0]:.0f}")]
         for v in ["td3_her_apf_shield", "shield_eval", "shield_eval_1cm", "td3_her", "td3", "td3_her_obl", "cem_rl", "apf_only", "full_set", "full_curriculum", "curriculum_mlp", "td3_her_apf", "td3_her_apfshape",
-                  "her_k1", "apf_shield_eval", "paper_ddpg_10k", "full_10k", "cem_s4", "cem_lr", "cem_s4_lr"]:
+                  "her_k1", "apf_shield_eval", "paper_ddpg_10k", "full_10k", "cem_s4", "cem_lr", "cem_s4_lr", "shield_eval_1cm_10k"]:
             a = agg.get((s, v))
             if a:
                 key = v.replace("_", "")

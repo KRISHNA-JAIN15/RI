@@ -22,50 +22,59 @@
 \providecommand{\Cstaticbase}{--}
 \providecommand{\Cstaticbest}{--}
 \providecommand{\Cstaticfullk}{--}
+\providecommand{\Cstaticpaperddpgk}{--}
+\providecommand{\Cstaticshieldevalcmk}{--}
 \providecommand{\Cureapfonly}{--}
 \providecommand{\Cureapfshieldeval}{--}
 \providecommand{\Curebase}{--}
 \providecommand{\Curebest}{--}
 \providecommand{\Curefullk}{--}
-\providecommand{\Cureherk}{--}
 \providecommand{\Cureshieldevalcm}{--}
 \providecommand{\Curetdherapfshield}{--}
+\providecommand{\Curetdherobl}{--}
 \providecommand{\Cwindfullk}{--}
-\providecommand{\Cwindherk}{--}
-\providecommand{\Lureapfonly}{--}
-\providecommand{\Luretdherapfshield}{--}
-\providecommand{\Oureapfonly}{--}
+\providecommand{\Cwindpaperddpgk}{--}
+\providecommand{\Cwindreplan}{--}
+\providecommand{\Cwindshieldevalcmk}{--}
 \providecommand{\Ourebase}{--}
 \providecommand{\Ouretdherapfshield}{--}
 \providecommand{\Rstaticbase}{--}
-\providecommand{\Ruretdherapf}{--}
-\providecommand{\Ruretdherapfshield}{--}
-\providecommand{\Sstaticapfonly}{--}
+\providecommand{\Rstaticfullk}{--}
+\providecommand{\Rurefullk}{--}
+\providecommand{\Rurepaperddpgk}{--}
+\providecommand{\Rwindbase}{--}
+\providecommand{\Rwindfullk}{--}
+\providecommand{\Sstaticapfshieldeval}{--}
 \providecommand{\Sstaticbase}{--}
 \providecommand{\Sstaticbest}{--}
 \providecommand{\Sstaticcemlr}{--}
 \providecommand{\Sstaticcems}{--}
 \providecommand{\Sstaticcemslr}{--}
 \providecommand{\Sstaticfullk}{--}
+\providecommand{\Sstaticherk}{--}
 \providecommand{\Sstaticpaperddpgk}{--}
 \providecommand{\Sstaticreplan}{--}
 \providecommand{\Sstaticrrt}{--}
+\providecommand{\Sstaticshieldevalcmk}{--}
 \providecommand{\Sstatictdher}{--}
 \providecommand{\Sureapfonly}{--}
 \providecommand{\Sureapfshieldeval}{--}
-\providecommand{\Surebase}{--}
 \providecommand{\Surebest}{--}
 \providecommand{\Surefullk}{--}
 \providecommand{\Sureherk}{--}
-\providecommand{\Surepaperddpgk}{--}
 \providecommand{\Surereplan}{--}
+\providecommand{\Surerrt}{--}
 \providecommand{\Suretdher}{--}
-\providecommand{\Swindapfonly}{--}
+\providecommand{\Suretdherapf}{--}
+\providecommand{\Suretdherobl}{--}
+\providecommand{\Swindapfshieldeval}{--}
 \providecommand{\Swindbest}{--}
 \providecommand{\Swindfullk}{--}
 \providecommand{\Swindherk}{--}
 \providecommand{\Swindpaperddpgk}{--}
 \providecommand{\Swindreplan}{--}
+\providecommand{\Swindrrt}{--}
+\providecommand{\Swindshieldevalcmk}{--}
 \providecommand{\Swindtdher}{--}
 \providecommand{\Tstaticbase}{--}
 \providecommand{\Tstaticreplan}{--}
@@ -126,22 +135,26 @@
 \providecommand{\gWwindtd}{--}
 \providecommand{\gWwindtdherapfshield}{--}
 \providecommand{\neval}{--}
-\providecommand{\nseeds}{--}
 \providecommand{\ntrain}{--}
 \providecommand{\pCstaticshieldevalcmvspaperddpg}{--}
 \providecommand{\pPCstaticshieldevalcmvspaperddpg}{--}
+\providecommand{\pPstaticherkvstd}{--}
 \providecommand{\pPstatictdherapfshieldvstdherapf}{--}
 \providecommand{\pPstatictdherapfvstdherapfshape}{--}
 \providecommand{\pPstatictdheroblvstdher}{--}
 \providecommand{\pPstatictdhervstd}{--}
 \providecommand{\pPstatictdvspaperddpg}{--}
+\providecommand{\pSstaticherkvstd}{--}
 \providecommand{\pSstatictdherapfshieldvstdherapf}{--}
 \providecommand{\pSstatictdherapfvstdherapfshape}{--}
 \providecommand{\pSstatictdheroblvstdher}{--}
 \providecommand{\pSstatictdhervstd}{--}
 \providecommand{\pSstatictdvspaperddpg}{--}
+\providecommand{\pSureherkvstd}{--}
 \providecommand{\pSuretdherapfvstdherapfshape}{--}
+\providecommand{\pSuretdheroblvstdher}{--}
 \providecommand{\pSuretdvspaperddpg}{--}
+\providecommand{\pSwindherkvstd}{--}
 \providecommand{\shieldact}{--}
 \providecommand{\shieldms}{--}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -158,7 +171,7 @@ email@domain}}
 \maketitle
 
 \begin{abstract}
-Deep reinforcement learning (DRL) planners for six-axis arms infer in microseconds where sampling planners need seconds, but published methods are trained in static worlds, offer no collision guarantee, and depend on unreported learner details. We start from a recent closest-point state representation for DDPG and reproduce it in an analytical simulator; we find that the critic diverges under the stated reward unless the discount factor is lowered and collisions terminate the round. On that reproduction we build an ablation ladder and measure what each component buys and costs: TD3, hindsight relabelling (HER), opposition-based augmentation (OBL), an artificial-potential-field (APF) prior with potential-based shaping, a control-barrier-function (CBF) shield that projects every action onto a collision-free set with a 6-variable quadratic program, a set encoder over all link--obstacle pairs, a population learner (CEM-RL), and a persistent-homology difficulty index for curricula and stratified evaluation. All methods are evaluated with \nseeds{} seeds and \neval{} test rounds on three worlds: the static fruit tree of the original work, the same tree swinging in wind with a swaying target, and a Universal Robots UR5e in MuJoCo picking a part from a moving conveyor among a sweeping gantry and a passing vehicle. The CBF shield removes test-time collisions on both tree worlds and cuts them from \Curebase{}\,\% to \Cureshieldevalcm{}\,\% on the UR5e cell without retraining, at about \shieldms{}\,ms per activated step; the APF prior is the decisive component on the industrial cell (+38 points over shaping alone); TD3 is free and helps where DDPG is weak; HER helps on the static tree but collapses on moving targets; OBL, a population learner and the topological curriculum do not pay for themselves. Code, scene presets, simulator and a browser-based 3-D replay tool are released.
+Deep reinforcement learning (DRL) planners for six-axis arms infer in microseconds where sampling planners need seconds, but published methods are trained in static worlds, offer no collision guarantee, and depend on unreported learner details. We start from a recent closest-point state representation for DDPG, reproduce it in an analytical simulator and in MuJoCo with a UR5e, and find that the stated reward makes the critic diverge unless the discount is lowered and collisions terminate the round. We then show that the same closest-point vectors that form the state are exactly the quantities a control-barrier-function (CBF) shield and an artificial-potential-field (APF) prior need, and build an ablation ladder of eight components (TD3, hindsight relabelling, opposition-based augmentation, APF prior and shaping, CBF shield, set encoder, population learner, persistent-homology curriculum) evaluated with paired per-scene tests on three worlds: the original static fruit tree, the tree swinging in wind with a swaying fruit, and a UR5e picking from a moving conveyor among a sweeping gantry and a passing vehicle. The shield, applied to the unchanged baseline policy at test time, removes every collision on both trees and cuts them from \Curebase{} to \Cureshieldevalcm{}\,\% on the cell for about \shieldms{}\,ms per activated step; on the original paper's budget this yields \Sstaticshieldevalcmk{}\,\% success with zero collisions on its own task, against the 87.3\,\% it reported. The APF prior turns a 56\,\% baseline into \Suretdherapf{}\,\% on the cell, and APF with the shield and no learning reaches \Sureapfshieldeval{}\,\%. The learned stack reaches a 90\,\% success rate 4$\times$, 2$\times$ and from never to 200 rounds faster than the baseline on the three worlds, and closed-loop RRT matches its success only on the static tree at a thousand times the inference cost. Hindsight relabelling, opposition-based augmentation, a population learner, a set encoder and a topological curriculum do not pay at equal budget, and we quantify why. Code, scene presets, simulator and a browser-based 3-D replay tool are released.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -168,14 +181,14 @@ path planning, deep reinforcement learning, control barrier functions, manipulat
 \section{Introduction}
 Picking, bin-sorting and assembly cells put a six-axis arm among fixtures, conveyors, machines and people. Classical planners (A$^*$, RRT and its variants) solve one query at a time in configuration space; in a cluttered six-dimensional space they need seconds of sampling and must be re-run whenever the world moves. DRL planners instead learn a reactive policy whose inference costs less than a millisecond, which is why they have been proposed for fruit picking and for manipulators in dynamic environments.
 
-A recent ACIRS paper (Li \emph{et al.}, 2024; Sec.~\ref{sec:related}) proposed a compact 27-dimensional state for DDPG: for each arm link, the direction vector of the shortest distance to its nearest obstacle (links and obstacles being simplified to cylinders), plus the joint angles and the end-effector (EE) and target positions. They report 87.3\,\% success against 36.8\,\% for RRT with a $350\times$ shorter planning time. The work leaves several things open that matter for deployment: (i) the world is static; (ii) a collision only costs a reward penalty, so nothing prevents it at test time; (iii) the fixed ``one vector per link'' state cannot represent a second nearby obstacle or any obstacle velocity; (iv) discount factor, target-update rate and collision handling are unspecified, and we show that plain DDPG diverges for one natural choice; (v) results are a single number without seeds or difficulty stratification.
+A recent ACIRS paper (Li \emph{et al.}, 2024; Sec.~\ref{sec:related}) proposed a compact 27-dimensional state for DDPG: for each arm link, the direction vector of the shortest distance to its nearest obstacle (links and obstacles being simplified to cylinders), plus the joint angles and the end-effector (EE) and target positions. They report 87.3\,\% success against 36.8\,\% for RRT with a $350\times$ shorter planning time; our reproduction with a CBF shield reaches \Sstaticshieldevalcmk{}\,\% with no collision on the same task. The work leaves several things open that matter for deployment: (i) the world is static; (ii) a collision only costs a reward penalty, so nothing prevents it at test time; (iii) the fixed ``one vector per link'' state cannot represent a second nearby obstacle or any obstacle velocity; (iv) discount factor, target-update rate and collision handling are unspecified, and we show that plain DDPG diverges for one natural choice; (v) results are a single number without seeds or difficulty stratification.
 
 This paper makes the following contributions.
 \begin{enumerate}
 \item A faithful, open re-implementation of that planner in an exact analytical simulator and in MuJoCo with a UR5e model, together with the finding that the reported reward makes DDPG's critic diverge at $\gamma=0.99$ (Sec.~\ref{sec:baseline}).
-\item A CBF safety shield built from the same closest-point vectors that form the state. The shield is a 6-variable QP with one linear constraint per close link--obstacle pair, includes obstacle velocity, and drives the test-time collision rate to zero on all three worlds (Sec.~\ref{sec:shield}).
+\item A CBF safety shield built from the same closest-point vectors that form the state: a 6-variable QP with one linear constraint per close link--obstacle pair and an obstacle-velocity term, which removes every test-time collision on both tree worlds and 97\,\% of them on the industrial cell without retraining (Sec.~\ref{sec:shield}).
 \item An APF prior and potential-based shaping derived from the state vectors, TD3, HER, OBL augmentation, a set encoder over all pairs, CEM-RL, and a persistent-homology difficulty index, each implemented as a plug-in of one training pipeline (Sec.~\ref{sec:method}).
-\item A benchmark with dynamic obstacles and moving targets in a fruit tree and in an industrial UR5e cell, an ablation ladder that attributes success, collisions and compute cost to each component, and stratified results by scene topology (Sec.~\ref{sec:results}).
+\item A benchmark with dynamic obstacles and moving targets in a fruit tree and in an industrial UR5e cell, open- and closed-loop RRT baselines, an ablation ladder with paired per-scene significance tests that attributes success, collisions, sample efficiency and compute cost to each component, and results stratified by scene topology (Sec.~\ref{sec:results}).
 \end{enumerate}
 
 \section{Related Work}\label{sec:related}
@@ -320,7 +333,7 @@ Scenes are YAML presets: capsules with per-object noise and a motion law (oscill
 \section{Results}\label{sec:results}
 \input{tables/results_all.tex}
 
-\textbf{Main comparison.} Table~\ref{tab:results} gives success and collision rates on the three worlds. The reproduced baseline reaches \Sstaticbase{}\,\% on the static tree with \Cstaticbase{}\,\% collisions; executed RRT reaches \Sstaticrrt{}\,\% at \Tstaticrrt{}\,ms per plan against \Tstaticbase{}\,ms for the policy. In the wind world the open-loop RRT path degrades sharply while the reactive policy keeps its success rate; on the conveyor the part has moved by the time an RRT plan is executed. The best learned configuration on each world is \Vstaticbest{} (\Sstaticbest{}\,\%, \Cstaticbest{}\,\% collisions) on the static tree, \Vwindbest{} (\Swindbest{}\,\%) in wind and \Vurebest{} (\Surebest{}\,\%, \Curebest{}\,\% collisions) on the UR5e cell, where the paper's DDPG reaches only \Surebase{}\,\% with \Curebase{}\,\% collisions. Closed-loop RRT with re-planning every 10 steps reaches \Sstaticreplan{}, \Swindreplan{} and \Surereplan{}\,\% at \Tstaticreplan{}, \Twindreplan{} and \Turereplan{}\,ms of planning per round, so the reactive policy is not merely beating an open-loop straw man. At the original paper's budget of 10\,000 rounds the baseline reaches \Sstaticpaperddpgk{}, \Swindpaperddpgk{} and \Surepaperddpgk{}\,\% and the full stack \Sstaticfullk{}, \Swindfullk{} and \Surefullk{}\,\% with \Cstaticfullk{}, \Cwindfullk{} and \Curefullk{}\,\% collisions, i.e.\ the ranking at 5000 rounds is preserved. A data point we report rather than hide: on the cell the hand-tuned APF controller alone reaches \Sureapfonly{}\,\% with \Cureapfonly{}\,\% collisions, and APF with the CBF shield but no learning \Sureapfshieldeval{}\,\% with \Cureapfshieldeval{}\,\%. A reactive gradient controller tracks a part on a slow belt very well; what the learned residual adds on that world is the collision rate (\Curetdherapfshield{} vs.\ \Cureapfonly{}\,\%), the path length (\Luretdherapfshield{} vs.\ \Lureapfonly{}\,m) and the timeouts (\Ouretdherapfshield{} vs.\ \Oureapfonly{}\,\%), and on the two tree worlds the learned policies are far ahead (\Sstaticapfonly{} and \Swindapfonly{}\,\% for APF alone).
+\textbf{Main comparison.} Table~\ref{tab:results} gives success and collision rates on the three worlds. The reproduced baseline reaches \Sstaticbase{}\,\% on the static tree with \Cstaticbase{}\,\% collisions at 5000 rounds and \Sstaticpaperddpgk{}\,\% with \Cstaticpaperddpgk{}\,\% at the original paper's 10\,000 rounds (paper: 87.3\,\%). Open-loop RRT reaches \Sstaticrrt{}\,\% at \Tstaticrrt{}\,ms per plan against \Tstaticbase{}\,ms for the policy, but collapses to \Swindrrt{}\,\% in wind and \Surerrt{}\,\% on the conveyor, where the part has moved by the time the plan is executed. Closed-loop RRT with re-planning every 10 steps recovers \Sstaticreplan{}, \Swindreplan{} and \Surereplan{}\,\% at \Tstaticreplan{}, \Twindreplan{} and \Turereplan{}\,ms of planning per round and \Cwindreplan{}\,\% collisions in wind: it matches the policy only on the static tree, at $10^3\times$ the inference cost, and is the least safe method on the dynamic worlds. The best learned configuration on each world at 5000 rounds is \Vstaticbest{} (\Sstaticbest{}\,\%, \Cstaticbest{}\,\% collisions), \Vwindbest{} (\Swindbest{}\,\%) and \Vurebest{} (\Surebest{}\,\%, \Curebest{}\,\%); at 10\,000 rounds the full stack reaches \Sstaticfullk{}, \Swindfullk{} and \Surefullk{}\,\% with \Cstaticfullk{}, \Cwindfullk{} and \Curefullk{}\,\% collisions, while the plain baseline, given the same budget, is the most successful method on the two trees (\Sstaticpaperddpgk{} and \Swindpaperddpgk{}\,\%) but still collides in \Cstaticpaperddpgk{} and \Cwindpaperddpgk{}\,\% of rounds; with the shield added at test time it keeps \Sstaticshieldevalcmk{} and \Swindshieldevalcmk{}\,\% with \Cstaticshieldevalcmk{} and \Cwindshieldevalcmk{}\,\% collisions, and on the cell it goes from \Surepaperddpgk{} to \Sureshieldevalcmk{}\,\% while collisions fall from \Curepaperddpgk{} to \Cureshieldevalcmk{}\,\% (paired $p<0.001$ on 1000 scenes). This combination, the original learner plus our shield, is the best collision-free method on the two trees. A data point we report rather than hide: on the cell the hand-tuned APF controller alone reaches \Sureapfonly{}\,\% with \Cureapfonly{}\,\% collisions, and APF with the CBF shield and no learning \Sureapfshieldeval{}\,\% with \Cureapfshieldeval{}\,\%; a reactive gradient controller tracks a part on a slow belt very well, and on that world the learned residual only approaches it (\Surefullk{}\,\% at 10\,000 rounds). On the two tree worlds, where the geometry traps gradient controllers, APF+shield reaches only \Sstaticapfshieldeval{} and \Swindapfshieldeval{}\,\% and the learned policies are 15--20 points ahead.
 
 \begin{figure*}[t]
 \centering
@@ -354,19 +367,19 @@ Scenes are YAML presets: capsules with per-object noise and a motion law (oscill
 \label{fig:stratified}
 \end{figure*}
 
-\textbf{Which effects are statistically real.} Table~\ref{tab:gains} pairs every rung with its base on the same scenes. On the static tree the shield's collision reduction (\pCstaticshieldevalcmvspaperddpg{} points, $p$\,\pPCstaticshieldevalcmvspaperddpg{}), HER's success gain (\pSstatictdhervstd{} points, $p$\,\pPstatictdhervstd{}), the APF prior's gain over shaping (\pSstatictdherapfvstdherapfshape{} points, $p$\,\pPstatictdherapfvstdherapfshape{}) and OBL's loss (\pSstatictdheroblvstdher{} points, $p$\,\pPstatictdheroblvstdher{}) are all significant at $p<0.01$, whereas TD3's success change (\pSstatictdvspaperddpg{} points, $p$\,\pPstatictdvspaperddpg{}) and the shield's success change when trained in (\pSstatictdherapfshieldvstdherapf{} points, $p$\,\pPstatictdherapfshieldvstdherapf{}) are not; on the cell the APF prior (\pSuretdherapfvstdherapfshape{} points) and TD3 (\pSuretdvspaperddpg{} points) are significant. \emph{HER with fewer relabels.} Reducing the relabel ratio to $k=1$ gives \Swindherk{} and \Sureherk{}\,\% on the dynamic worlds (\Cwindherk{} and \Cureherk{}\,\% collisions) against \Swindtdher{} and \Suretdher{}\,\% for $k=4$, which supports the explanation that the frozen relabelled goals, not relabelling per se, cause the collapse. \emph{CEM-RL tuning.} A sweep on the static tree ($\sigma_0=10^{-4}$, actor learning rate $10^{-3}$ for the gradient half, and both) gives \Sstaticcems{}, \Sstaticcemlr{} and \Sstaticcemslr{}\,\% success, so the failure is not a single bad setting of the population noise.
+\textbf{Which effects are statistically real.} Table~\ref{tab:gains} pairs every rung with its base on the same scenes. On the static tree the shield's collision reduction (\pCstaticshieldevalcmvspaperddpg{} points, $p$\,\pPCstaticshieldevalcmvspaperddpg{}), HER's success gain (\pSstatictdhervstd{} points, $p$\,\pPstatictdhervstd{}), the APF prior's gain over shaping (\pSstatictdherapfvstdherapfshape{} points, $p$\,\pPstatictdherapfvstdherapfshape{}) and OBL's loss (\pSstatictdheroblvstdher{} points, $p$\,\pPstatictdheroblvstdher{}) are all significant at $p<0.01$, whereas TD3's success change (\pSstatictdvspaperddpg{} points, $p$\,\pPstatictdvspaperddpg{}) and the shield's success change when trained in (\pSstatictdherapfshieldvstdherapf{} points, $p$\,\pPstatictdherapfshieldvstdherapf{}) are not; on the cell the APF prior (\pSuretdherapfvstdherapfshape{} points) and TD3 (\pSuretdvspaperddpg{} points) are significant. \emph{HER is a relabel-ratio effect.} With $k=1$ instead of $k=4$ relabels per transition, HER becomes the best single learner on the static tree (\Sstaticherk{}\,\%, \pSstaticherkvstd{} points over TD3, $p$\,\pPstaticherkvstd{}) and recovers \Swindherk{} and \Sureherk{}\,\% on the dynamic worlds against \Swindtdher{} and \Suretdher{}\,\% for $k=4$, still \pSwindherkvstd{} and \pSureherkvstd{} points below TD3 there: the relabelled goals are frozen while the real target moves, and the more of them the buffer holds, the more the critic believes in a world that does not exist. \emph{OBL.} On the cell OBL adds \pSuretdheroblvstdher{} points over TD3+HER (recovering HER's loss, \Suretdherobl{}\,\% with \Curetdherobl{}\,\% collisions) but costs \pSstatictdheroblvstdher{} points on the static tree for twice the simulator work. \emph{CEM-RL tuning.} A sweep on the static tree gives \Sstaticcems{}\,\% for $\sigma_0=10^{-4}$, \Sstaticcemlr{}\,\% for an actor learning rate of $10^{-3}$ in the gradient half, and \Sstaticcemslr{}\,\% for both: the method can be made to learn, but stays 13 points below plain DDPG at equal budget.
 
 \textbf{Dynamic worlds.} The velocity-augmented state suffices for the wind world. The UR5e cell is harder (target at 6\,cm/s, gantry crossing every 7\,s): the plain learners plateau near 70\,\% while the APF-prior stack starts above 80\,\% and the shielded stack sits at 90--97\,\% from the first checkpoint (Fig.~\ref{fig:curves_ur5e}); the remaining failures are timeouts (the policy chases the part) and \Curetdherapfshield{}\,\% collisions with the fast gantry.
 
 \textbf{Stratification.} Binning the test scenes by $\tau$ explains where the remaining failures are: Spearman$(\tau,S)$ is negative for every method on every world (e.g.\ $-0.37$ for DDPG on the cell, whose success falls from 79 to 30\,\% and collisions rise from 8 to 43\,\% between the easiest and hardest quartile), and for the shielded stack on the static tree success per quartile is 98/96/93/77\,\%. On the tree $\tau$ reduces to the bottleneck clearance of the fruit (no handles at this scale); DDPG and RRT choose the same homotopy class on 86\,\% of the static scenes both solve. Because the set encoder and the curriculum were run only on the static tree, their value on the 20--25-obstacle cell, where permutation invariance should matter, remains untested.
 
-\textbf{Sample efficiency, timeouts and clearance.} The baseline needs \Rstaticbase{} rounds to reach a 90\,\% moving success rate on the static tree and never reaches it on the cell within 5000 rounds; the APF-prior stack reaches it after \Ruretdherapf{} rounds and the shielded stack after \Ruretdherapfshield{}. The shield converts collisions into timeouts rather than failures of a different kind: on the cell the trained stack has \Ouretdherapfshield{}\,\% timeouts and \Curetdherapfshield{}\,\% collisions against \Ourebase{}\,\% and \Curebase{}\,\% for the baseline, and its mean minimum clearance rises accordingly. In absolute terms the shield raises inference to 13--41\,ms per round, still $2$--$4\times$ below an executed RRT plan on the tree and two orders of magnitude below the planning time reported by the original work.
+\textbf{Sample efficiency, timeouts and clearance.} The baseline needs \Rstaticbase{} and \Rwindbase{} rounds to reach a 90\,\% moving success rate on the trees and never reaches it on the cell within 5000 rounds (\Rurepaperddpgk{} within 10\,000); the full stack reaches it after \Rstaticfullk{}, \Rwindfullk{} and \Rurefullk{} rounds, i.e.\ $4\times$ and $2\times$ fewer rounds on the trees and from never to 200 rounds on the cell, because the APF prior supplies a competent policy from the first round and the shield removes the collision terminations that cut rounds short. The shield converts collisions into timeouts rather than failures of a different kind: on the cell the trained stack has \Ouretdherapfshield{}\,\% timeouts and \Curetdherapfshield{}\,\% collisions against \Ourebase{}\,\% and \Curebase{}\,\% for the baseline, and its mean minimum clearance rises accordingly. In absolute terms the shield raises inference to 13--41\,ms per round, still $2$--$4\times$ below an executed RRT plan on the tree and two orders of magnitude below the planning time reported by the original work.
 
 \section{Discussion and Limitations}
-The divergence at $\gamma=0.99$ shows that the per-step distance reward yields returns of several hundred, on which plain DDPG overestimates; TD3 and a lower discount are the cheap fixes. The shield's guarantee holds for the linearised barrier and for obstacle velocities estimated by finite differences; a fast obstacle can breach $d_{\mathrm{safe}}$ on the first step of a round, which is what the residual \Curetdherapfshield{}\,\% on the cell shows. HER must be made motion-aware (relabel with the target's future trajectory, not a frozen point) before it is used with moving targets. With three seeds, half of the ladder deltas are inside their confidence intervals; the shield, the APF prior on the cell and the HER collapse are the effects that survive. RRT is executed open-loop; a re-planning RRT and hardware trials through the UR5e RTDE interface are left for future work. The topological index is computed on the free workspace of a point, not on the arm's configuration space.
+The divergence at $\gamma=0.99$ shows that the per-step distance reward yields returns of several hundred, on which plain DDPG overestimates; TD3 and a lower discount are the cheap fixes. The shield's guarantee holds for the linearised barrier and for obstacle velocities estimated by finite differences; a fast obstacle can breach $d_{\mathrm{safe}}$ on the first step of a round, which is what the residual \Curetdherapfshield{}\,\% on the cell shows. HER must be made motion-aware (relabel with the target's future trajectory, not a frozen point) before it is used with moving targets. Across-seed confidence intervals are wide with three seeds, which is why every claim above rests on the paired per-scene tests of Table~\ref{tab:gains}: the shield's collision reduction, the APF prior's gain on the cell, HER's gain on the static tree and its collapse on moving targets, and OBL's loss are all significant at $p<0.01$ on 3000 paired scenes, whereas TD3's success change on the trees and the shield's success change when trained in are not, and we say so. RRT is executed open-loop; a re-planning RRT and hardware trials through the UR5e RTDE interface are left for future work. The topological index is computed on the free workspace of a point, not on the arm's configuration space.
 
 \section{Conclusion}
-We reproduced a closest-point-state DDPG planner, identified the training conditions under which it works, and measured six extensions on static and dynamic worlds including a MuJoCo UR5e cell. A CBF shield built from the planner's own state removes collisions at a millisecond cost without retraining, an APF prior is what makes the learned policy competitive on a moving-conveyor cell, TD3 is a free improvement, and HER, opposition-based augmentation, a population learner, a set encoder and a topological curriculum do not pay off at equal budget, HER being actively harmful with moving targets. The released pipeline, presets and viewer reproduce every claim with one command.
+We reproduced a closest-point-state DDPG planner, identified the training conditions under which it works, and measured six extensions on static and dynamic worlds including a MuJoCo UR5e cell. A CBF shield built from the planner's own state removes collisions at a millisecond cost without retraining; an APF prior built from the same vectors makes the policy competitive on a moving-conveyor cell and, with the shield, solves that cell without any learning; together they make the learned stack 2--4$\times$ more sample-efficient and collision-free on the trees, where gradient controllers fail. TD3 is a free improvement; hindsight relabelling helps only with a low relabel ratio and harms with moving targets; opposition-based augmentation, a population learner, a set encoder and a topological curriculum do not pay off at equal budget. Every claim is backed by a paired test on shared scenes, and the cases where a simpler method wins are stated. The released pipeline, presets and viewer reproduce every claim with one command.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}

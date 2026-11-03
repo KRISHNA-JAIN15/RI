@@ -161,3 +161,10 @@ variants:
     seeds: [0]
     script: scripts/train_cemrl.py
     set: {method.algo: td3, method.plugins: "[her]", method.cem.sigma_init: 0.0001, ddpg.actor_lr: 0.001, method.label: "CEM-RL s1e-4 lr1e-3"}
+  shield_eval_1cm_10k:
+    label: "DDPG (paper) 10k + CBF shield at test time (1 cm)"
+    base: paper_ddpg_10k
+    eval_only: paper_ddpg_10k
+    ladder: false
+    seeds: [0]
+    set: {method.plugins: "[shield]", method.shield.d_safe: 0.01, method.label: "DDPG 10k + shield (eval, 1 cm)"}

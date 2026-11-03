@@ -36,7 +36,15 @@ GRID = "#e4e4e0"
 
 # ------------------------------------------------------------------ collection
 def read_curve(path: Path, bin_size: int = 100) -> dict:
-    rows = list(csv.DictReader(open(path)))
+    rows = []
+    for r in csv.DictReader(open(path)):
+        try:  # tolerate truncated / interleaved tail rows
+            if r.get("reached") not in ("0", "1"):
+                break
+            float(r["return"]); int(r["episode"]); int(r["steps"])
+        except (TypeError, ValueError):
+            break
+        rows.append(r)
     succ = np.array([int(r["reached"]) for r in rows], dtype=float)
     ret = np.array([float(r["return"]) for r in rows])
     steps = np.array([int(r["env_steps"]) for r in rows]) if "env_steps" in rows[0] else np.cumsum([int(r["steps"]) for r in rows])
@@ -292,12 +300,13 @@ def fig_curves_all(rows, bench, out: Path, key="success"):
     for ax, sc in zip(axes, scenes):
         style(ax)
         for i, var in enumerate(bench["variants"]):
-            if bench["variants"][var].get("eval_only"):
+            if bench["variants"][var].get("eval_only") or not bench["variants"][var].get("ladder", True):
                 continue
             curves = [r["curve"] for r in rows if r["scene"] == sc and r["variant"] == var and "curve" in r]
             if not curves:
                 continue
             n = min(len(c["episode"]) for c in curves)
+            n = min(n, 50)  # 5000 rounds at 100-round bins: same x-range for every panel
             x = np.array(curves[0]["episode"][:n])
             y = np.array([c[key][:n] for c in curves]) * (100 if key == "success" else 1)
             m = y.mean(0)
