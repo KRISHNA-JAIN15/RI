@@ -72,6 +72,7 @@ variants:
       wind: {env.max_obstacles: 8}
       ur5e: {env.max_obstacles: 24}
   full_curriculum:
+    ladder: false                   # excluded from the ladder figure (static-only rung)
     label: "+ TDA curriculum"
     base: full_set
     seeds: [0, 1]
@@ -81,10 +82,12 @@ variants:
       wind: {env.max_obstacles: 8}
       ur5e: {env.max_obstacles: 24}
   curriculum_mlp:
+    ladder: false                   # excluded from the ladder figure (static-only rung)
     label: "+ TDA curriculum (on MLP full stack)"
     base: td3_her_apf_shield
     set: {method.algo: td3, method.plugins: "[her,apf,shield,curriculum]", method.apf.prior: true, method.apf.shaping: true, method.label: "full + curriculum"}
   cem_rl:
+    ladder: false                   # excluded from the ladder figure (static-only rung)
     label: "CEM-RL (population) on TD3+HER"
     base: td3_her
     script: scripts/train_cemrl.py
