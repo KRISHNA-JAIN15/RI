@@ -1,0 +1,63 @@
+# UR5e in MuJoCo, dynamic industrial pick cell (moving conveyor target, sweeping gantry, AGV).
+seed: 0
+
+arm:
+  home_deg: [180.0, -110.0, 120.0, -100.0, -90.0, 0.0]   # compact pose facing the cell (+x)
+  link_radius: 0.05                                        # only used for the viewer / analytic checks
+  reach: 0.95                                              # max shoulder-to-tool distance of the model
+  joint_limits_deg: 360.0                                  # real UR5e range; the pan joint must be free to turn both ways from 180 deg
+
+scene:
+  preset: industrial_cell       # configs/scenes/industrial_cell.yaml
+  target_radius: 0.03
+  min_target_reach: 0.30
+  max_target_reach: 0.85
+  floor_collision: true
+
+env:
+  sim:
+    backend: mujoco
+    control: kinematic          # kinematic | dynamic (position servos + physics)
+    timestep: 0.002
+    max_obstacles: 32
+    self_collision: true
+  dt: 0.1                       # seconds of world motion per control step
+  max_steps: 100
+  max_delta_deg: 5.0
+  reach_threshold: 0.03
+  distance_scale: 10.0
+  collision_penalty: -50.0
+  collision_mode: terminate
+  monitored_links: [1, 2, 3, 4, 5]
+  normalize_angles: false
+  include_velocities: true      # Sl velocities + target velocity -> 45-D state
+
+ddpg:
+  hidden_sizes: [128, 128]
+  actor_lr: 0.00001
+  critic_lr: 0.0001
+  gamma: 0.95
+  tau: 0.005
+  weight_decay: 0.0001
+  buffer_size: 100000
+  batch_size: 64
+  warmup_steps: 1000
+  action_noise_deg_start: 2.0
+  action_noise_deg_end: 0.0
+  grad_clip: 1.0
+
+train:
+  episodes: 10000
+  log_every: 50
+  checkpoint_every: 250
+  viewer_episodes: 4
+  reward_curve_bin: 100
+
+eval:
+  episodes: 1000
+  rrt:
+    step_deg: 5.0
+    goal_bias: 0.10
+    max_iter: 3000
+    max_time_s: 10.0
+    goal_tol: 0.03

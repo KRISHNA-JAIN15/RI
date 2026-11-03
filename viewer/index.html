@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arm Planner Viewer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%2360a5fa%27/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <header id="topbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <div class="title">DDPG Arm Path Planning</div>
+        <div class="subtitle"><span id="run-name">…</span> <span id="live-badge" class="badge hidden">LIVE</span></div>
+      </div>
+    </div>
+    <div class="status-pill" id="status-pill"><span class="dot"></span><span id="status-text">loading</span></div>
+  </header>
+
+  <aside id="panel">
+    <section class="card">
+      <div class="card-head">
+        <h3>Training progress</h3>
+        <span class="mono" id="ckpt-label">round 0</span>
+      </div>
+      <canvas id="curve" height="150"></canvas>
+      <div class="legend">
+        <span><i class="sw ret"></i>avg reward / 50 rounds</span>
+        <span><i class="sw suc"></i>success rate</span>
+      </div>
+      <input id="ckpt-slider" type="range" min="0" max="0" value="0" step="1" />
+      <div class="ckpt-dots" id="ckpt-dots"></div>
+      <label class="toggle"><input type="checkbox" id="follow-latest" checked /><span>follow newest checkpoint while training</span></label>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h3>Test scene</h3>
+        <span class="mono" id="scene-summary"></span>
+      </div>
+      <div class="scene-tabs" id="scene-tabs"></div>
+      <div class="controls">
+        <button id="btn-first" title="first frame (Home)">⏮</button>
+        <button id="btn-prev" title="previous frame (←)">◀</button>
+        <button id="btn-play" class="primary" title="play / pause (space)">▶</button>
+        <button id="btn-next" title="next frame (→)">▶|</button>
+        <button id="btn-last" title="last frame (End)">⏭</button>
+        <select id="speed" title="playback speed">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
+      </div>
+      <input id="frame-slider" type="range" min="0" max="0" value="0" step="1" />
+      <div class="hud">
+        <div class="stat"><span class="k">step</span><span class="v mono" id="hud-step">0 / 0</span></div>
+        <div class="stat"><span class="k">EE → target</span><span class="v mono" id="hud-dist">—</span></div>
+        <div class="stat"><span class="k">reward</span><span class="v mono" id="hud-reward">—</span></div>
+        <div class="stat"><span class="k">return</span><span class="v mono" id="hud-return">—</span></div>
+        <div class="stat"><span class="k">min clearance</span><span class="v mono" id="hud-clear">—</span></div>
+        <div class="stat"><span class="k">outcome</span><span class="v" id="hud-outcome">—</span></div>
+      </div>
+      <div class="joints mono" id="joints"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h3>View</h3></div>
+      <div class="toggles">
+        <label class="toggle"><input type="checkbox" id="opt-sl" checked /><span>state vectors S<sub>l</sub> (link → nearest obstacle)</span></label>
+        <label class="toggle"><input type="checkbox" id="opt-trail" checked /><span>end-effector trail</span></label>
+        <label class="toggle"><input type="checkbox" id="opt-ghost" /><span>ghost of untrained policy</span></label>
+        <label class="toggle"><input type="checkbox" id="opt-rotate" /><span>auto-rotate camera</span></label>
+        <label class="toggle"><input type="checkbox" id="opt-loop" checked /><span>loop playback</span></label>
+      </div>
+      <div class="hint">drag: orbit · wheel: zoom · right-drag: pan · space: play · ←/→: step · [ ]: checkpoint · 1-9: scene</div>
+    </section>
+  </aside>
+
+  <div id="toast" class="hidden"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

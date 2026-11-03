@@ -1,0 +1,38 @@
+# Industrial pick cell for a UR5e (base at the origin, work area towards +x).
+# All lengths in metres, times in seconds.  Obstacles are capsules (p1 -> p2, radius).
+name: industrial_cell
+obstacles:
+  # conveyor belt side rails (belt runs along y at x = 0.55, top surface z ~ 0.10)
+  - {p1: [0.43, -0.45, 0.10], p2: [0.43, 0.45, 0.10], radius: 0.02}
+  - {p1: [0.67, -0.45, 0.10], p2: [0.67, 0.45, 0.10], radius: 0.02}
+  # belt frame legs
+  - {p1: [0.43, -0.45, 0.0], p2: [0.43, -0.45, 0.10], radius: 0.02}
+  - {p1: [0.67, -0.45, 0.0], p2: [0.67, -0.45, 0.10], radius: 0.02}
+  - {p1: [0.43, 0.45, 0.0], p2: [0.43, 0.45, 0.10], radius: 0.02}
+  - {p1: [0.67, 0.45, 0.0], p2: [0.67, 0.45, 0.10], radius: 0.02}
+  # vision-system camera mast and overhead boom above the belt
+  - {p1: [0.35, 0.55, 0.0], p2: [0.35, 0.55, 1.1], radius: 0.03, noise: 0.03}
+  - {p1: [0.35, 0.55, 1.1], p2: [0.70, 0.55, 1.1], radius: 0.03, noise: 0.03}
+  # neighbouring robot / gantry sweeping across the cell at shoulder height
+  - {p1: [0.45, 0.30, 0.80], p2: [0.95, 0.30, 0.80], radius: 0.045,
+     motion: {type: oscillate, axis: [0, -1, 0], amplitude: 0.35, period: 7.0, phase: random}}
+  # AGV / tote passing behind the belt (bounces along y)
+  - {box: {center: [0.95, 0.0, 0.25], size: [0.30, 0.40, 0.50]}, radius: 0.03,
+     motion: {type: linear, axis: [0, 1, 0], speed: 0.25, bounds: [-0.6, 0.6], phase: random}}
+  # safety fence post behind the robot
+  - {p1: [-0.45, -0.3, 0.0], p2: [-0.45, -0.3, 1.2], radius: 0.04}
+target:
+  radius: 0.03
+  # part arriving on the belt: spawns on the belt line and travels along +y (wraps around)
+  region: {center: [0.55, 0.0, 0.16], extent: [0.10, 0.0, 0.04]}
+  noise: 0.02
+  motion: {type: conveyor, axis: [0, 1, 0], speed: 0.06, bounds: [-0.30, 0.30], phase: random}
+# 0-2 extra random clutter capsules (bins, cables) in the work volume
+randomize:
+  count: [0, 2]
+  region: {center: [0.45, 0.0, 0.45], extent: [0.4, 0.8, 0.5]}
+  radius: [0.025, 0.05]
+  length: [0.10, 0.35]
+  motion_pool:
+    - null
+    - {type: oscillate, axis: [0, 0, 1], amplitude: 0.08, period: 4.0, phase: random}

@@ -1,0 +1,7 @@
+runs/
+__pycache__/
+*.pyc
+.pytest_cache/
+third_party/mujoco_menagerie/universal_robots_ur5e/assets/
+*.gif
+*.mp4

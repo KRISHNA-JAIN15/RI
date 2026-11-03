@@ -1,0 +1,32 @@
+# Warehouse order-picking: UR5e in front of a shelf unit, items on two shelf boards,
+# a person walking past between robot and shelf.
+name: warehouse_shelf
+obstacles:
+  # shelf uprights
+  - {p1: [0.80, -0.50, 0.0], p2: [0.80, -0.50, 1.6], radius: 0.025}
+  - {p1: [0.80,  0.50, 0.0], p2: [0.80,  0.50, 1.6], radius: 0.025}
+  - {p1: [1.05, -0.50, 0.0], p2: [1.05, -0.50, 1.6], radius: 0.025}
+  - {p1: [1.05,  0.50, 0.0], p2: [1.05,  0.50, 1.6], radius: 0.025}
+  # shelf boards (front edge capsules, thin) at three heights
+  - {p1: [0.80, -0.50, 0.25], p2: [0.80, 0.50, 0.25], radius: 0.015}
+  - {p1: [0.80, -0.50, 0.60], p2: [0.80, 0.50, 0.60], radius: 0.015}
+  - {p1: [0.80, -0.50, 0.95], p2: [0.80, 0.50, 0.95], radius: 0.015}
+  # boxes already on the shelves (clutter the pick lane)
+  - {box: {center: [0.92, -0.30, 0.37], size: [0.20, 0.20, 0.22]}, radius: 0.02, noise: 0.04}
+  - {box: {center: [0.92,  0.25, 0.72], size: [0.20, 0.25, 0.22]}, radius: 0.02, noise: 0.04}
+  # a person walking through the aisle between robot and shelf (vertical capsule, bounces along y)
+  - {p1: [0.63, 0.0, 0.0], p2: [0.63, 0.0, 1.7], radius: 0.18,
+     motion: {type: linear, axis: [0, 1, 0], speed: 0.35, bounds: [-1.2, 1.2], phase: random}}
+  # ceiling-mounted light fixture
+  - {p1: [0.2, -0.6, 1.3], p2: [0.2, 0.6, 1.3], radius: 0.04}
+target:
+  radius: 0.03
+  # items standing at the front edge of the two lower boards
+  points:
+    - [0.86, -0.05, 0.31]
+    - [0.86,  0.15, 0.31]
+    - [0.86, -0.15, 0.66]
+    - [0.86,  0.05, 0.66]
+    - [0.86,  0.30, 0.31]
+  noise: 0.03
+  motion: {type: static}

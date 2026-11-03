@@ -1,0 +1,78 @@
+# Hyper-parameters reproduced from:
+#   Li, Xiong, Tian, Gao, Cai. "Deep Reinforcement Learning for Robotic Arm Path
+#   Planning in Multi-Obstacle Environments", ACIRS 2024. DOI 10.1109/ACIRS62330.2024.10684932
+# Every value that the paper states explicitly is marked [paper]. Values the paper
+# leaves unspecified are marked [assumed] and can be changed freely.
+
+seed: 0
+
+arm:
+  # Six-axis arm, standard Denavit-Hartenberg parameters (metres / radians).
+  # Chosen so that the maximum shoulder-to-end-effector reach
+  #   sqrt((a2+a3)^2 + d4^2) + sqrt(d5^2 + d6^2) = 0.612 m   [paper: reach 61.2 cm].
+  d1: 0.150
+  a2: 0.260
+  a3: 0.230
+  d4: 0.100
+  d5: 0.080
+  d6: 0.0782
+  link_radius: 0.040            # [assumed] each link simplified to a cylinder (Fig. 1)
+  joint_limits_deg: 170.0       # [assumed] symmetric +-170 deg on every joint
+  home_deg: [0.0, 90.0, -135.0, 45.0, 90.0, 0.0]   # [assumed] start pose of every episode
+
+scene:
+  obstacle_radius: 0.04         # [paper] obstacles radius 4 cm
+  target_radius: 0.03           # [paper] picking target radius 3 cm
+  tree_position: [0.65, 0.0, 0.0]   # [assumed] trunk foot relative to the arm base
+  trunk_height: 0.90            # [assumed] "varying heights"
+  branch_heights: [0.20, 0.30, 0.40, 0.48]   # [assumed] branch roots on the trunk
+  branch_length_range: [0.15, 0.28]           # [assumed] shortest branch lowest
+  branch_elevation_deg: [10.0, 40.0]          # [assumed]
+  obstacle_pose_noise: 0.10     # [paper] noise 0..10 added to obstacle pose (interpreted as 0..10 cm & 0..10 deg)
+  target_noise: 0.05            # [paper] noise 0..5 cm added to the target centre
+  min_target_reach: 0.20        # [assumed] target at least 20 cm from the shoulder
+  max_target_reach: 0.58        # [assumed] target inside the arm's reach with margin
+  floor_collision: true         # [assumed] links below z = 0 count as a collision
+
+env:
+  max_steps: 100                # [paper] each round consists of 100 steps
+  max_delta_deg: 5.0            # [paper] action = incremental angle in [-5, 5] deg
+  reach_threshold: 0.03         # [paper] picking range 3 cm
+  distance_scale: 10.0          # [paper] d = EE-target distance x 10
+  collision_penalty: -50.0      # [paper]
+  # [paper] "the round ends when 100 steps are completed or when the target point is touched".
+  # collision_mode: terminate -> -50 and the round ends (default; see README "Assumptions")
+  #                 continue  -> -50, joint update applied, round continues
+  collision_mode: terminate
+  monitored_links: [1, 2, 3, 4, 5]   # [paper] Sl has 5 direction vectors (base pedestal excluded) -> 27-D state
+  normalize_angles: false       # [assumed] feed Sa in radians (true: radians / pi)
+
+ddpg:
+  hidden_sizes: [128, 128]      # [paper] two fully connected layers of 128 neurons
+  actor_lr: 0.00001             # [paper]
+  critic_lr: 0.0001             # [paper]
+  gamma: 0.95                   # [assumed] 0.99 makes the critic diverge in this task (see README)
+  tau: 0.005                    # [assumed] soft update rate (delta in eq. 3-4)
+  weight_decay: 0.0001          # [paper says "regularization is added"; L2 on the critic, value assumed]
+  buffer_size: 100000           # [paper]
+  batch_size: 64                # [paper]
+  warmup_steps: 1000            # [assumed] random transitions before the first gradient step
+  action_noise_deg_start: 2.0   # [paper] action noise 0..2 deg  (Gaussian sigma, decayed linearly)
+  action_noise_deg_end: 0.0
+  grad_clip: 1.0                # [assumed] global-norm gradient clipping on both networks
+
+train:
+  episodes: 10000               # [paper]
+  log_every: 50
+  checkpoint_every: 250
+  viewer_episodes: 4            # rollouts exported per checkpoint for the 3-D viewer (fixed scenes)
+  reward_curve_bin: 100         # episodes per point for the Fig. 4 style plot
+
+eval:
+  episodes: 1000                # [paper] each algorithm tested over 1000 rounds
+  rrt:
+    step_deg: 5.0               # joint-space extension step
+    goal_bias: 0.10
+    max_iter: 3000
+    max_time_s: 10.0
+    goal_tol: 0.03
