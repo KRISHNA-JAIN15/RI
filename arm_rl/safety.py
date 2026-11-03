@@ -41,6 +41,7 @@ coordinate-ascent solver (``hildreth_qp``); both return the same minimiser.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -107,8 +108,10 @@ def _osqp_qp(x0: np.ndarray, G: np.ndarray, h: np.ndarray, lb: np.ndarray, ub: n
     q = -np.asarray(x0, dtype=np.float64)
     Gm = sp.csc_matrix(G) if G.shape[0] else None
     hv = h if G.shape[0] else None
-    x = _qps.solve_qp(P, q, Gm, hv, lb=lb, ub=ub, solver="osqp", eps_abs=1e-9, eps_rel=1e-9,
-                      max_iter=int(max(max_iter, 4000)), polish=False, verbose=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # osqp deprecation notices; qpsolvers warns on 'primal infeasible' (handled below)
+        x = _qps.solve_qp(P, q, Gm, hv, lb=lb, ub=ub, solver="osqp", eps_abs=1e-9, eps_rel=1e-9,
+                          max_iter=int(max(max_iter, 4000)), polishing=False, verbose=False)
     return x
 
 

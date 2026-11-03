@@ -38,7 +38,17 @@ def parse_args():
     p.add_argument("--no-rrt", action="store_true")
     p.add_argument("--rrt-episodes", type=int, default=None, help="RRT rounds (defaults to --episodes)")
     p.add_argument("--n-figures", type=int, default=3, help="number of Fig. 5 style trajectory plots")
+    p.add_argument("--save-paths", action="store_true", help="write paths.npz (per-episode EE trajectories, NaN-padded, and targets) to --out")
     return p.parse_args()
+
+
+def pad_paths(paths: list) -> tuple[np.ndarray, np.ndarray]:
+    """Stack variable-length (T_i, 3) EE paths into (N, T_max, 3) padded with NaN, plus (N,) lengths."""
+    lengths = np.array([len(p) for p in paths], dtype=np.int64)
+    out = np.full((len(paths), int(lengths.max()) if len(paths) else 0, 3), np.nan)
+    for i, p in enumerate(paths):
+        out[i, : len(p)] = np.asarray(p, dtype=np.float64).reshape(-1, 3)
+    return out, lengths
 
 
 def run_ddpg_episode(env: ArmPathPlanningEnv, agent, scene, plugins: list | None = None) -> tuple[EpisodeResult, np.ndarray]:
@@ -99,10 +109,12 @@ def main():
 
     # ---------------- DDPG
     ddpg_results = []
+    ddpg_paths = []
     figs_done = 0
     for i in tqdm(range(n), desc="DDPG eval", dynamic_ncols=True):
         res, ee_hist = run_ddpg_episode(env, agent, scenes[i], plugins)
         ddpg_results.append(res)
+        ddpg_paths.append(ee_hist)
         if res.success and figs_done < args.n_figures:
             plot_ee_path(ee_hist, scenes[i].target, out / f"fig5_ddpg_path_{figs_done}.png", f"DDPG round {i}")
             render_scene(env.arm, scenes[i], env.q, ee_hist, f"DDPG round {i}", out / f"scene_ddpg_{figs_done}.png")
@@ -114,18 +126,28 @@ def main():
     if not args.no_rrt:
         planner = RRTPlanner(env, cfg["eval"]["rrt"], seed=args.seed)
         rrt_results = []
+        rrt_paths = []
         for i in tqdm(range(n_rrt), desc="RRT eval", dynamic_ncols=True):
             env.reset(options={"scene": scenes[i]})  # plan on the t = 0 snapshot
             r = planner.plan(env.arm.home, scenes[i].target)
             if r.success:
                 ex = execute_path(env, scenes[i], r.path)
                 rrt_results.append(EpisodeResult(ex["success"], ex["path_length"], r.time_ms, ex["final_error"], ex["collided"], ex["steps"], 0.0))
+                rrt_paths.append(np.asarray(env.ee_history))  # the executed (replayed) EE trajectory
             else:
                 rrt_results.append(EpisodeResult(False, r.ee_path_length, r.time_ms, r.final_error, False, len(r.path), 0.0))
+                rrt_paths.append(np.asarray(r.ee_path).reshape(-1, 3))
             if r.success and i < args.n_figures:
                 plot_ee_path(r.ee_path, scenes[i].target, out / f"fig5_rrt_path_{i}.png", f"RRT round {i}")
         rows.append(summarize(rrt_results, "RRT (ours)"))
         write_json([asdict(r) for r in rrt_results], out / "rrt_episodes.json")
+
+    if args.save_paths:
+        arrays = {"targets": np.asarray([sc.target for sc in scenes]), "seed": np.array(args.seed)}
+        arrays["ddpg_paths"], arrays["ddpg_lengths"] = pad_paths(ddpg_paths)
+        if not args.no_rrt:
+            arrays["rrt_paths"], arrays["rrt_lengths"] = pad_paths(rrt_paths)
+        np.savez_compressed(out / "paths.npz", **arrays)
 
     rows += PAPER_TABLE_I
     table = format_table(rows)

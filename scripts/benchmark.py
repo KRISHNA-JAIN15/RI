@@ -66,7 +66,8 @@ def build_jobs(bench: dict, scenes, variants, seeds, episodes, eval_episodes, ou
         sc_cfg = bench["scenes"][sc]["config"]
         for var in variants:
             v = bench["variants"][var]
-            for seed in seeds:
+            var_seeds = [sd for sd in seeds if sd in v["seeds"]] if v.get("seeds") else seeds
+            for seed in var_seeds:
                 d = out_root / sc / var / f"seed{seed}"
                 train_name = f"train:{sc}/{var}/s{seed}"
                 eval_name = f"eval:{sc}/{var}/s{seed}"
@@ -79,8 +80,10 @@ def build_jobs(bench: dict, scenes, variants, seeds, episodes, eval_episodes, ou
                     jobs[eval_name] = Job(eval_name, cmd, d, d / "eval" / "table1.json", deps=[f"train:{sc}/{v['eval_only']}/s{seed}"])
                     continue
                 script = v.get("script", "scripts/train.py")
+                sets = dict(v.get("set") or {})
+                sets.update((v.get("scene_set") or {}).get(sc) or {})  # per-scene overrides
                 cmd = [PY, script, "--config", sc_cfg, "--out", str(d), "--seed", str(seed), "--episodes", str(episodes),
-                       "--threads", "1", "--quiet", "--set", "train.viewer_episodes=0"] + set_args(v.get("set"))
+                       "--threads", "1", "--quiet", "--set", "train.viewer_episodes=0"] + set_args(sets)
                 jobs[train_name] = Job(train_name, cmd, d, d / "train_summary.json")
                 ecmd = [PY, "scripts/evaluate.py", "--checkpoint", str(d / "ddpg_final.pt"), "--episodes", str(eval_episodes),
                         "--seed", str(bench["eval_seed"]), "--n-figures", "0", "--out", str(d / "eval")]

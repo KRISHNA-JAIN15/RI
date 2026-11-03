@@ -60,11 +60,25 @@ variants:
   full_set:
     label: "+ set encoder (all pairs)"
     base: td3_her_apf_shield
+    seeds: [0, 1]                   # 5-8x slower per update than the MLP: two seeds
     set: {method.algo: td3, method.plugins: "[her,apf,shield]", method.apf.prior: true, method.apf.shaping: true, env.all_pairs: true, method.encoder: set, method.label: "full + set"}
+    scene_set:                      # obstacle slots sized to the scene (tree has 5 obstacles, cell <= 22)
+      static: {env.max_obstacles: 8}
+      wind: {env.max_obstacles: 8}
+      ur5e: {env.max_obstacles: 24}
   full_curriculum:
     label: "+ TDA curriculum"
     base: full_set
+    seeds: [0, 1]
     set: {method.algo: td3, method.plugins: "[her,apf,shield,curriculum]", method.apf.prior: true, method.apf.shaping: true, env.all_pairs: true, method.encoder: set, method.label: "full + set + curriculum"}
+    scene_set:
+      static: {env.max_obstacles: 8}
+      wind: {env.max_obstacles: 8}
+      ur5e: {env.max_obstacles: 24}
+  curriculum_mlp:
+    label: "+ TDA curriculum (on MLP full stack)"
+    base: td3_her_apf_shield
+    set: {method.algo: td3, method.plugins: "[her,apf,shield,curriculum]", method.apf.prior: true, method.apf.shaping: true, method.label: "full + curriculum"}
   cem_rl:
     label: "CEM-RL (population) on TD3+HER"
     base: td3_her
