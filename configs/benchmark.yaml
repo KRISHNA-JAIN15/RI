@@ -1,0 +1,72 @@
+# Benchmark / ablation matrix consumed by scripts/benchmark.py.
+# Each variant is a rung of the ablation ladder: `base` names the previous rung so the
+# report can attribute the delta (success, collisions, return) and the cost (wall time,
+# env steps, extra sim steps, plugin time, inference time) to the step that added it.
+
+out_dir: runs/bench
+seeds: [0, 1, 2]
+train_episodes: 5000
+eval_episodes: 1000
+eval_seed: 12345
+workers: 8
+
+scenes:
+  static: {config: configs/default.yaml, label: "Fruit tree, static (paper)"}
+  wind:   {config: configs/fruit_tree_wind.yaml, label: "Fruit tree, wind (dynamic)"}
+  ur5e:   {config: configs/ur5e_industrial.yaml, label: "UR5e industrial cell (MuJoCo, dynamic)"}
+
+variants:
+  # ---------------- baselines
+  paper_ddpg:
+    label: "DDPG (paper)"
+    base: null
+    rrt: true                       # also evaluate RRT on this variant's scenes
+    set: {method.label: "DDPG (paper)"}
+  apf_only:
+    label: "APF controller only"
+    base: null
+    eval_only: paper_ddpg           # no training; re-uses the paper_ddpg checkpoint of the same seed
+    set: {method.plugins: "[apf]", method.apf.prior_only: true, method.label: "APF only"}
+  shield_eval:
+    label: "DDPG (paper) + CBF shield at test time"
+    base: paper_ddpg
+    eval_only: paper_ddpg
+    set: {method.plugins: "[shield]", method.label: "DDPG + shield (eval)"}
+  # ---------------- ablation ladder
+  td3:
+    label: "+ TD3"
+    base: paper_ddpg
+    set: {method.algo: td3, method.label: "TD3"}
+  td3_her:
+    label: "+ HER"
+    base: td3
+    set: {method.algo: td3, method.plugins: "[her]", method.label: "TD3+HER"}
+  td3_her_obl:
+    label: "+ OBL"
+    base: td3_her
+    set: {method.algo: td3, method.plugins: "[her,obl]", method.label: "TD3+HER+OBL"}
+  td3_her_apfshape:
+    label: "+ APF shaping"
+    base: td3_her
+    set: {method.algo: td3, method.plugins: "[her,apf]", method.apf.prior: false, method.apf.shaping: true, method.label: "TD3+HER+APF-shape"}
+  td3_her_apf:
+    label: "+ APF prior (residual)"
+    base: td3_her_apfshape
+    set: {method.algo: td3, method.plugins: "[her,apf]", method.apf.prior: true, method.apf.shaping: true, method.label: "TD3+HER+APF"}
+  td3_her_apf_shield:
+    label: "+ CBF shield"
+    base: td3_her_apf
+    set: {method.algo: td3, method.plugins: "[her,apf,shield]", method.apf.prior: true, method.apf.shaping: true, method.label: "TD3+HER+APF+shield"}
+  full_set:
+    label: "+ set encoder (all pairs)"
+    base: td3_her_apf_shield
+    set: {method.algo: td3, method.plugins: "[her,apf,shield]", method.apf.prior: true, method.apf.shaping: true, env.all_pairs: true, method.encoder: set, method.label: "full + set"}
+  full_curriculum:
+    label: "+ TDA curriculum"
+    base: full_set
+    set: {method.algo: td3, method.plugins: "[her,apf,shield,curriculum]", method.apf.prior: true, method.apf.shaping: true, env.all_pairs: true, method.encoder: set, method.label: "full + set + curriculum"}
+  cem_rl:
+    label: "CEM-RL (population) on TD3+HER"
+    base: td3_her
+    script: scripts/train_cemrl.py
+    set: {method.algo: td3, method.plugins: "[her]", method.label: "CEM-RL"}

@@ -8,6 +8,11 @@ State  (eq. 8-12): S = [Sl, Sa, Se, St]
     St  - picking-target xyz (3 dims)
     optional (include_velocities): nearest-obstacle velocity per monitored link (5 x 3)
     and target velocity (3) for dynamic scenes -> 45 dims.
+    optional (all_pairs, research direction C6): the flat vector is extended with ALL
+    link-obstacle pair tokens [n_links x max_obstacles x pair_dim] and a validity mask
+    [n_links x max_obstacles]; token (i, j) = [V_ij (3), surface clearance (1),
+    obstacle velocity (3), obstacle radius (1, optional)] in scene order, zero-padded
+    (mask 0) for j >= n_obstacles. Consumed by networks.SetEncoder (encoder: set).
 Action (Sec. III-B): incremental joint rotation in [-5 deg, 5 deg] for all six axes.
 Reward (eq. 13):     -|d| if |d| > 3 cm, 0 if |d| < 3 cm, -50 on collision, with
                      d = 10 x ||EE - target||.
@@ -119,12 +124,20 @@ class ArmPathPlanningEnv(gym.Env):
         self.normalize_angles = bool(env_cfg.get("normalize_angles", False))
         self.include_velocities = bool(env_cfg.get("include_velocities", False))
         self.dt = float(env_cfg.get("dt", 0.1))  # seconds of scene motion per step
+        # C6: permutation-invariant token set over all link-obstacle pairs (see SetEncoder)
+        self.all_pairs = bool(env_cfg.get("all_pairs", False))
+        self.max_obstacles = int(env_cfg.get("max_obstacles", 32))
+        self.pair_include_radius = bool(env_cfg.get("pair_include_radius", True))
+        self.pair_clearance_cap = float(env_cfg.get("pair_clearance_cap", 2.0))  # clips +inf (MuJoCo distmax) clearances
+        self.pair_dim = 3 + 1 + 3 + (1 if self.pair_include_radius else 0)
         self.render_mode = render_mode
 
         n_links = len(self.monitored_links)
         self.state_dim = 3 * n_links + self.arm.n_joints + 3 + 3
         if self.include_velocities:
             self.state_dim += 3 * n_links + 3
+        if self.all_pairs:
+            self.state_dim += n_links * self.max_obstacles * (self.pair_dim + 1)
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(self.state_dim,), dtype=np.float32)
         # slices of the flat state vector (used by HER, APF, the set encoder, the shield)
         o = 0
@@ -134,6 +147,11 @@ class ArmPathPlanningEnv(gym.Env):
             o += size
         if self.include_velocities:
             for key, size in [("vl", 3 * n_links), ("vt", 3)]:
+                self.obs_layout[key] = (o, o + size)
+                o += size
+        if self.all_pairs:
+            self.obs_layout.update({"max_obstacles": self.max_obstacles, "pair_dim": self.pair_dim})
+            for key, size in [("pairs", n_links * self.max_obstacles * self.pair_dim), ("mask", n_links * self.max_obstacles)]:
                 self.obs_layout[key] = (o, o + size)
                 o += size
         assert o == self.state_dim
@@ -186,7 +204,32 @@ class ArmPathPlanningEnv(gym.Env):
             else:
                 vl = np.stack([self.scene.obs_vel[nearest[i]] for i in self.monitored_links])
             parts += [vl.ravel(), self.scene.target_vel]
+        if self.all_pairs:
+            pairs, mask = self._pair_tokens(clearance, direction)
+            parts += [pairs.ravel(), mask.ravel()]
         return np.concatenate(parts).astype(np.float32)
+
+    def _pair_tokens(self, clearance: np.ndarray, direction: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """All link-obstacle pair tokens (C6), zero-padded to ``max_obstacles`` with a validity mask.
+
+        Returns ``pairs`` (n_links, max_obstacles, pair_dim) and ``mask`` (n_links, max_obstacles).
+        Obstacles keep their scene order (the encoder is permutation invariant); obstacles beyond
+        ``max_obstacles`` are dropped (the MuJoCo backend already caps them the same way).
+        """
+        L, K = len(self.monitored_links), self.max_obstacles
+        pairs = np.zeros((L, K, self.pair_dim), dtype=np.float64)
+        mask = np.zeros((L, K), dtype=np.float64)
+        M = min(int(clearance.shape[1]), K)
+        if M == 0:
+            return pairs, mask
+        links = np.asarray(self.monitored_links)
+        pairs[:, :M, 0:3] = direction[links, :M]
+        pairs[:, :M, 3] = np.clip(clearance[links, :M], -self.pair_clearance_cap, self.pair_clearance_cap)
+        pairs[:, :M, 4:7] = self.scene.obs_vel[None, :M]
+        if self.pair_include_radius:
+            pairs[:, :M, 7] = self.scene.radii[None, :M]
+        mask[:, :M] = 1.0
+        return pairs, mask
 
     def distance_to_target(self, q: np.ndarray | None = None) -> float:
         ee = self.ee if q is None else self.arm.ee_position(q)
