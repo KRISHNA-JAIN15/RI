@@ -269,6 +269,26 @@ class ArmPathPlanningEnv(gym.Env):
             "t": self.scene.t,
         }
 
+    # ------------------------------------------------------------------ snapshot (for look-ahead / counterfactual steps)
+    def snapshot(self) -> dict:
+        """Capture the full environment state so a counterfactual step can be undone."""
+        return {
+            "q": self.q.copy(), "ee": self.ee.copy(), "step_count": self.step_count, "ee_path_length": self.ee_path_length,
+            "n_collisions": self.n_collisions, "n_hist": len(self.ee_history), "scene": self.scene.copy(),
+        }
+
+    def restore(self, snap: dict) -> None:
+        self.q = snap["q"].copy()
+        self.ee = snap["ee"].copy()
+        self.step_count = snap["step_count"]
+        self.ee_path_length = snap["ee_path_length"]
+        self.n_collisions = snap["n_collisions"]
+        self.ee_history = self.ee_history[: snap["n_hist"]]
+        self.scene = snap["scene"].copy()
+        self.backend.set_scene(self.scene)
+        self.backend.apply_joints(self.q, 0.0)
+        self._geom_cache = None
+
     # ------------------------------------------------------------------ render
     def render(self):
         from arm_rl.visualize import render_scene
