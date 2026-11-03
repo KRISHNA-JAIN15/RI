@@ -18,6 +18,7 @@ def load_plugins(cfg: dict, env, agent, phase: str = "train") -> list[Plugin]:
     for name in method.get("plugins", []) or []:
         mod = importlib.import_module(f"arm_rl.plugins.{name}")
         opts = dict(method.get(name) or {})
+        opts.setdefault("episodes", int((cfg.get("train") or {}).get("episodes", 0)) or None)  # budget for schedules
         p = mod.Plugin(opts, env, agent, phase=phase)
         plugins.append(p)
     return plugins

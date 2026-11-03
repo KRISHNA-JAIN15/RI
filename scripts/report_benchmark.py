@@ -266,31 +266,30 @@ def fig_cost(agg, bench, out: Path):
 
 # ------------------------------------------------------------------ stratified
 def md_stratified(rows, bench, sc):
-    """Average the per-bin success of each variant's stratified.json across seeds."""
+    """Per-variant success per TDA-difficulty bin, averaged over seeds (format of scripts/stratify.py)."""
     out = []
+    nb = 0
     for var in bench["variants"]:
         strat = [r["stratified"] for r in rows if r["scene"] == sc and r["variant"] == var and "stratified" in r]
         if not strat:
             continue
-        # expected format from scripts/stratify.py: {"algorithms": {name: {"bins": [{"tau_range":[a,b], "n":..,"success":..,"collision":..}], "spearman": x}}}
-        try:
-            algs = strat[0]["algorithms"]
-            for alg in algs:
-                bins = [s["algorithms"][alg]["bins"] for s in strat if alg in s["algorithms"]]
-                nb = min(len(b) for b in bins)
-                cells = []
-                for k in range(nb):
-                    succ = np.mean([b[k]["success"] for b in bins])
-                    cells.append(f"{100 * succ:.0f}")
-                rho = np.mean([s["algorithms"][alg].get("spearman", float('nan')) for s in strat])
-                out.append(f"| {bench['variants'][var]['label']} / {alg} | " + " | ".join(cells) + f" | {rho:.2f} |")
-        except Exception as exc:  # format differs -> show raw keys
-            out.append(f"| {var} | (unexpected stratified.json format: {exc}) |")
+        algs = sorted({a for st in strat for a in st.get("algorithms", {})})
+        for alg in algs:
+            if alg == "rrt" and var != "paper_ddpg":
+                continue
+            bins = [st["algorithms"][alg]["bins"] for st in strat if alg in st.get("algorithms", {})]
+            k = min(len(b) for b in bins)
+            nb = max(nb, k)
+            succ = [np.mean([b[i]["success_rate"] for b in bins]) for i in range(k)]
+            coll = [np.mean([b[i]["collision_rate"] for b in bins]) for i in range(k)]
+            rho = np.nanmean([st["algorithms"][alg].get("correlation", {}).get("success", {}).get("spearman_rho", float("nan")) for st in strat if alg in st.get("algorithms", {})])
+            hom = [st["algorithms"][alg].get("homotopy", {}).get("all", {}).get("n_classes", float("nan")) for st in strat if alg in st.get("algorithms", {})]
+            name = bench["variants"][var]["label"] if alg == "ddpg" else "RRT"
+            out.append(f"| {name} | " + " | ".join(f"{100 * a:.0f} / {100 * c:.0f}" for a, c in zip(succ, coll)) + f" | {rho:.2f} | {np.nanmean(hom):.1f} |")
     if not out:
         return ""
-    nb = max(len(l.split("|")) - 4 for l in out)
-    header = "| Method | " + " | ".join(f"τ bin {k + 1} S(%)" for k in range(nb)) + " | Spearman(τ, success) |"
-    return "\n".join([header, "|" + "---|" * (nb + 2)] + out)
+    header = "| Method | " + " | ".join(f"τ bin {i + 1}: S / coll (%)" for i in range(nb)) + " | Spearman(τ, success) | homotopy classes |"
+    return "\n".join([header, "|" + "---|" * (nb + 3)] + out)
 
 
 # ------------------------------------------------------------------ main
