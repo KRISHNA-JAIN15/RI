@@ -62,7 +62,7 @@ def main():
     out = ROOT / args.out
     out.mkdir(parents=True, exist_ok=True)
     scenes = [s for s in bench["scenes"] if any(k[0] == s for k in agg)]
-    variants = [v for v in bench["variants"] if any((s, v) in agg for s in scenes)]
+    variants = [v for v in bench["variants"] if any((s, v) in agg for s in scenes) and bench["variants"][v].get("paper", True)]
 
     # ---------------- results_all.tex
     cols = "l" + "rr" * len(scenes)
@@ -154,19 +154,27 @@ def main():
     L += ["\\bottomrule", "\\end{tabular}", "\\end{table*}"]
     (out / "efficiency.tex").write_text("\n".join(L))
 
-    # ---------------- gains.tex: relative effect of each component vs the rung it builds on
+    # ---------------- gains.tex: effect of each component vs the rung it builds on, paired per-scene tests
+    paired = {}
+    pj = ROOT / args.bench / "paired.json"
+    if pj.exists():
+        import json
+        for r in json.load(open(pj)):
+            paired[(r["scene"], r["variant"], r["base"])] = r
+    def star(pv):
+        return "$^{***}$" if pv < 0.001 else "$^{**}$" if pv < 0.01 else "$^{*}$" if pv < 0.05 else ""
     L = ["\\begin{table*}[t]", "\\centering",
-         "\\caption{Effect of each component relative to the rung it builds on (mean over seeds): change in success $\\Delta S$ and collision rate $\\Delta C$ in percentage points, "
-         "change in training wall time $\\Delta W$ in \\%, and inference time per test round as a multiple of the base rung ($\\times T$). "
+         "\\caption{Effect of each component relative to the rung it builds on. $\\Delta S$, $\\Delta C$: paired per-scene differences in success and collision rate (percentage points) on the same test scenes, pooled over seeds; "
+         "$^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$ (exact McNemar). $\\Delta W$: change in training wall time (\\%); $\\times T$: inference time per round as a multiple of the base rung. "
          "Test-time rows add the component to the trained DDPG policy without retraining.}",
-         "\\label{tab:gains}", "\\footnotesize", "\\setlength{\\tabcolsep}{3.5pt}",
+         "\\label{tab:gains}", "\\footnotesize", "\\setlength{\\tabcolsep}{3.5pt}", "\\resizebox{\\textwidth}{!}{",
          "\\begin{tabular}{ll" + "rrrr" * len(scenes) + "}", "\\toprule",
          "Component & vs. & " + " & ".join(f"\\multicolumn{{4}}{{c}}{{{SCENE_SHORT.get(s, s)}}}" for s in scenes) + " \\\\",
          " & & " + " & ".join("$\\Delta S$ & $\\Delta C$ & $\\Delta W$ & $\\times T$" for _ in scenes) + " \\\\", "\\midrule"]
     G = []
     for v in variants:
         bv = bench["variants"][v].get("base")
-        if not bv:
+        if not bv or v in ("rrt_replan",):
             continue
         cells = []
         for sc in scenes:
@@ -178,10 +186,13 @@ def main():
             eo = bench["variants"][v].get("eval_only")
             dW = "--" if eo else f"{100 * (a['train_wall_s'][0] / b['train_wall_s'][0] - 1):+.0f}"
             xT = a["T_ms"][0] / b["T_ms"][0]
-            cells += [f"{dS:+.1f}", f"{dC:+.1f}", dW, f"{xT:.1f}"]
+            pr = paired.get((sc, v, bv))
+            sS = f"{pr['dS']:+.1f}{star(pr['p_S'])}" if pr else f"{dS:+.1f}"
+            sC = f"{pr['dC']:+.1f}{star(pr['p_C'])}" if pr else f"{dC:+.1f}"
+            cells += [sS, sC, dW, f"{xT:.1f}"]
             G += [macro(f"gS{sc}{v}", f"{dS:+.1f}"), macro(f"gC{sc}{v}", f"{dC:+.1f}"), macro(f"gW{sc}{v}", dW if dW == "--" else dW.replace("+", "+")), macro(f"gT{sc}{v}", f"{xT:.1f}")]
         L.append(f"{SHORT.get(v, v)} & {SHORT.get(bv, bv)} & " + " & ".join(cells) + " \\\\")
-    L += ["\\bottomrule", "\\end{tabular}", "\\end{table*}"]
+    L += ["\\bottomrule", "\\end{tabular}", "}", "\\end{table*}"]
     (out / "gains.tex").write_text("\n".join(L))
 
     # ---------------- numbers.tex

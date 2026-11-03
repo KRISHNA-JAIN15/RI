@@ -4,7 +4,7 @@
 # env steps, extra sim steps, plugin time, inference time) to the step that added it.
 
 out_dir: runs/bench
-seeds: [0, 1, 2, 3, 4]          # core rungs use all five; side branches restrict via `seeds:`
+seeds: [0, 1, 2]
 train_episodes: 5000
 eval_episodes: 1000
 eval_seed: 12345
@@ -76,6 +76,7 @@ variants:
       wind: {env.max_obstacles: 8}
       ur5e: {env.max_obstacles: 24}
   full_curriculum:
+    paper: false                    # partial coverage after the compute cut; kept in REPORT.md only
     ladder: false                   # excluded from the ladder figure (static-only rung)
     label: "+ TDA curriculum"
     base: full_set
@@ -127,14 +128,14 @@ variants:
     base: paper_ddpg
     ladder: false
     episodes: 10000
-    seeds: [0, 1, 2]
+    seeds: [0]
     set: {method.label: "DDPG (paper) 10k"}
   full_10k:
     label: "TD3+HER+APF+shield, 10 000 rounds"
     base: td3_her_apf_shield
     ladder: false
     episodes: 10000
-    seeds: [0, 1, 2]
+    seeds: [0]
     set: {method.algo: td3, method.plugins: "[her,apf,shield]", method.apf.prior: true, method.apf.shaping: true, method.label: "full 10k"}
   cem_s4:
     label: "CEM-RL, sigma_init 1e-4"
