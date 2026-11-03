@@ -63,6 +63,7 @@ variants:
     base: td3_her_apf
     set: {method.algo: td3, method.plugins: "[her,apf,shield]", method.apf.prior: true, method.apf.shaping: true, method.label: "TD3+HER+APF+shield"}
   full_set:
+    ladder: false                   # excluded from the ladder figure
     label: "+ set encoder (all pairs)"
     base: td3_her_apf_shield
     seeds: [0, 1]                   # 5-8x slower per update than the MLP: two seeds

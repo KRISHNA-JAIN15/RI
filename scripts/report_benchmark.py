@@ -229,7 +229,8 @@ def fig_curves(rows, bench, sc, out: Path, key="success"):
 
 def fig_ladder(agg, bench, out: Path):
     scenes = list(bench["scenes"])
-    variants = [v for v in bench["variants"] if any((sc, v) in agg for sc in scenes) and bench["variants"][v].get("ladder", True)]
+    # only rungs that have data on every world, so the three panels carry the same rows
+    variants = [v for v in bench["variants"] if all((sc, v) in agg for sc in scenes) and bench["variants"][v].get("ladder", True)]
     fig, axes = plt.subplots(1, len(scenes), figsize=(3.6 * len(scenes), 3.8), sharey=True)
     axes = np.atleast_1d(axes)
     for ax, sc in zip(axes, scenes):
