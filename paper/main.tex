@@ -230,10 +230,26 @@ Table~\ref{tab:results} gives success and collision rates on the three worlds. T
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\linewidth,height=0.17\textheight,keepaspectratio]{ladder.pdf}
+\includegraphics[width=\linewidth,height=0.28\textheight,keepaspectratio]{ladder.pdf}
 \caption{Ablation ladder: test success per world (mean$\pm$95\,\% CI over seeds). Each bar adds one component to the bar above it.}
 \label{fig:ladder}
 \end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth,height=0.26\textheight,keepaspectratio]{curves_all.pdf}
+\caption{Learning curves on the three worlds (success per 100 training rounds, mean$\pm$95\,\% CI over seeds). The APF prior starts above 80\,\% on the UR5e cell at the first checkpoint; the shielded stack sits at 90--97\,\% throughout.}
+\label{fig:curves_ur5e}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth,height=0.24\textheight,keepaspectratio]{stratified.pdf}
+\caption{Success per scene-difficulty quartile (persistent-homology index $\tau$, Q1 easiest). Failures concentrate in Q4; on the UR5e cell the APF prior and the shield lift Q4 from 30\,\% (DDPG) to 68--80\,\%.}
+\label{fig:stratified}
+\end{figure*}
+
+\input{tables/gains.tex}
 
 
 \subsection{What each component buys and what it costs}
@@ -253,21 +269,8 @@ On the static tree the set encoder matches the shielded MLP stack (\gSstaticfull
 \subsubsection{CEM-RL (C4)}
 Fails at this budget (\gSstaticcemrl{} points): the parameter noise of the population drowns the small-learning-rate gradient half and the best actor collides in every test round.
 
-\input{tables/gains.tex}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\linewidth,height=0.19\textheight,keepaspectratio]{curves_all.pdf}
-\caption{Learning curves on the three worlds (success per 100 training rounds, mean$\pm$95\,\% CI over seeds). The APF prior starts above 80\,\% on the UR5e cell at the first checkpoint; the shielded stack sits at 90--97\,\% throughout.}
-\label{fig:curves_ur5e}
-\end{figure*}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\linewidth,height=0.15\textheight,keepaspectratio]{stratified.pdf}
-\caption{Success per scene-difficulty quartile (persistent-homology index $\tau$, Q1 easiest). Failures concentrate in Q4; on the UR5e cell the APF prior and the shield lift Q4 from 30\,\% (DDPG) to 68--80\,\%.}
-\label{fig:stratified}
-\end{figure*}
 
 
 \subsection{Significance, relabel ratio, OBL and CEM-RL tuning}\label{sec:sig}
