@@ -5,3 +5,8 @@ __pycache__/
 third_party/mujoco_menagerie/universal_robots_ur5e/assets/
 *.gif
 *.mp4
+paper/main.pdf
+paper/*.aux
+paper/*.log
+paper/*.bbl
+paper/*.blg

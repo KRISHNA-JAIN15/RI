@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\caption{Results on Fruit tree, wind (dynamic)}
+\label{tab:main_wind}
+\small
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+Method & S (\%) & collision (\%) & timeout (\%) & L (m) & T (ms) & E (m) & min clearance (m) & rounds$\rightarrow$90 \% & train wall (min) & env steps \\
+\midrule
+DDPG (paper) & 94.2 $\pm$ 4.4 & 2.4 $\pm$ 1.1 & 3.3 $\pm$ 3.5 & 0.48 $\pm$ 0.00 & 0.74 $\pm$ 0.04 & 0.026 $\pm$ 0.001 & 0.030 $\pm$ 0.005 & 2346 $\pm$ 804 & 4.8 $\pm$ 0.4 & 166 $\pm$ 19k \\
+RRT (plan on t=0 snapshot, executed) & 40.9 & 18.0 & -- & 0.75 & 55.8 $\pm$ 1.6 & 0.022 & -- & -- & -- & -- \\
+APF controller only & 81.5 & 4.3 & 14.2 $\pm$ 0.0 & 2.01 & 27.02 $\pm$ 0.51 & 0.026 & 0.020 & 2346 $\pm$ 804 & 4.8 $\pm$ 0.4 & 166 $\pm$ 19k \\
+DDPG (paper) + CBF shield at test time (d\_safe 2 cm) & 93.2 $\pm$ 4.2 & 0.0 & 6.8 $\pm$ 4.2 & 0.48 $\pm$ 0.00 & 15.61 $\pm$ 1.58 & 0.026 $\pm$ 0.001 & 0.033 $\pm$ 0.004 & 2346 $\pm$ 804 & 4.8 $\pm$ 0.4 & 166 $\pm$ 19k \\
+DDPG (paper) + CBF shield at test time (d\_safe 1 cm) & 94.9 $\pm$ 4.1 & 0.0 & 5.1 $\pm$ 4.1 & 0.48 $\pm$ 0.00 & 15.44 $\pm$ 1.64 & 0.026 $\pm$ 0.001 & 0.031 $\pm$ 0.005 & 2346 $\pm$ 804 & 4.8 $\pm$ 0.4 & 166 $\pm$ 19k \\
+\bottomrule
+\end{tabular}
+\end{table*}

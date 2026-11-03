@@ -15,6 +15,7 @@ import argparse
 import csv
 import json
 import math
+import textwrap
 from collections import defaultdict
 from pathlib import Path
 
@@ -27,7 +28,7 @@ import yaml  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 # validated categorical palette (dataviz skill reference instance), fixed order
-PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#52514e", "#8a8f99", "#b0b4bb", "#0b0b0b"]
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#52514e", "#8a8f99", "#7a4f1d", "#0b0b0b", "#1a8ca0", "#b5179e"]
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 GRID = "#e4e4e0"
@@ -89,6 +90,14 @@ def collect(bench_dir: Path) -> list[dict]:
 
 
 # ------------------------------------------------------------------ aggregation
+def rel(p: Path) -> str:
+    """Path relative to the repo when possible (an --out outside the repo stays absolute)."""
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:
+        return str(p)
+
+
 def ci95(values):
     v = np.asarray([x for x in values if x is not None and not (isinstance(x, float) and math.isnan(x))], dtype=float)
     if v.size == 0:
@@ -192,7 +201,7 @@ def style(ax):
 
 
 def fig_curves(rows, bench, sc, out: Path, key="success"):
-    fig, ax = plt.subplots(figsize=(6.2, 3.6))
+    fig, ax = plt.subplots(figsize=(6.4, 4.2))
     style(ax)
     for i, var in enumerate(bench["variants"]):
         curves = [r["curve"] for r in rows if r["scene"] == sc and r["variant"] == var and "curve" in r and not bench["variants"][var].get("eval_only")]
@@ -209,7 +218,7 @@ def fig_curves(rows, bench, sc, out: Path, key="success"):
     ax.set_xlabel("training rounds")
     ax.set_ylabel("success rate (%) per 100 rounds" if key == "success" else "average return per 100 rounds")
     ax.set_title(bench["scenes"][sc]["label"], fontsize=10, color=TEXT, loc="left")
-    ax.legend(fontsize=7, frameon=False, ncol=2)
+    ax.legend(fontsize=6.5, frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.22))
     fig.tight_layout()
     fig.savefig(out.with_suffix(".png"), dpi=200)
     fig.savefig(out.with_suffix(".pdf"))
@@ -219,7 +228,7 @@ def fig_curves(rows, bench, sc, out: Path, key="success"):
 def fig_ladder(agg, bench, out: Path):
     scenes = list(bench["scenes"])
     variants = [v for v in bench["variants"] if any((sc, v) in agg for sc in scenes)]
-    fig, axes = plt.subplots(1, len(scenes), figsize=(3.2 * len(scenes), 3.6), sharey=True)
+    fig, axes = plt.subplots(1, len(scenes), figsize=(3.6 * len(scenes), 3.8), sharey=True)
     axes = np.atleast_1d(axes)
     for ax, sc in zip(axes, scenes):
         style(ax)
@@ -229,13 +238,14 @@ def fig_ladder(agg, bench, out: Path):
             if not a:
                 continue
             ax.barh(k, a["S"][0], xerr=a["S"][1], color=PALETTE[k % len(PALETTE)], height=0.62, error_kw={"ecolor": MUTED, "capsize": 2, "linewidth": 1})
-            ax.text(min(a["S"][0] + 1.5, 97), k, f"{a['S'][0]:.1f}", va="center", fontsize=7, color=TEXT)
+            ax.text(a["S"][0] + a["S"][1] + 1.5, k, f"{a['S'][0]:.1f}", va="center", fontsize=7, color=TEXT)
         ax.set_yticks(ys)
-        ax.set_yticklabels([bench["variants"][v]["label"] for v in variants], fontsize=7)
+        ax.set_yticklabels([bench["variants"][v]["label"] for v in variants], fontsize=8)
         ax.invert_yaxis()
-        ax.set_xlim(0, 105)
+        ax.set_xlim(0, 122)
+        ax.set_xticks([0, 25, 50, 75, 100])
         ax.set_xlabel("success (%)")
-        ax.set_title(bench["scenes"][sc]["label"], fontsize=9, loc="left", color=TEXT)
+        ax.set_title(textwrap.fill(bench["scenes"][sc]["label"], 30), fontsize=9, loc="left", color=TEXT)
     fig.tight_layout()
     fig.savefig(out.with_suffix(".png"), dpi=200)
     fig.savefig(out.with_suffix(".pdf"))
@@ -243,7 +253,7 @@ def fig_ladder(agg, bench, out: Path):
 
 
 def fig_cost(agg, bench, out: Path):
-    fig, axes = plt.subplots(1, 2, figsize=(7.5, 3.4))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
     for ax in axes:
         style(ax)
     for i, var in enumerate(bench["variants"]):
@@ -257,8 +267,8 @@ def fig_cost(agg, bench, out: Path):
     axes[0].set_ylabel("test success (%)")
     axes[1].set_xlabel("inference time per round (ms)")
     axes[1].set_ylabel("collision rate (%)")
-    axes[0].legend(fontsize=6, frameon=False, ncol=2)
-    fig.tight_layout()
+    fig.legend(fontsize=6.5, frameon=False, ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.01))
+    fig.tight_layout(rect=(0, 0.16, 1, 1))
     fig.savefig(out.with_suffix(".png"), dpi=200)
     fig.savefig(out.with_suffix(".pdf"))
     plt.close(fig)
@@ -324,7 +334,7 @@ def main():
         st = md_stratified(rows, bench, sc)
         if st:
             md += ["### Stratified by TDA scene complexity τ (quantile bins)", "", st, ""]
-        md += [f"![learning curves]({(out / 'figures' / f'curves_{sc}.png').relative_to(ROOT)})", ""]
+        md += [f"![learning curves]({rel(out / 'figures' / f'curves_{sc}.png')})", ""]
         (out / "tables" / f"main_{sc}.tex").write_text(md_to_tex(md_main_table(agg, bench, sc), f"Results on {bench['scenes'][sc]['label']}", f"tab:main_{sc}"))
         (out / "tables" / f"ladder_{sc}.tex").write_text(md_to_tex(md_ladder(agg, bench, sc), f"Ablation ladder on {bench['scenes'][sc]['label']}", f"tab:ladder_{sc}"))
         fig_curves(rows, bench, sc, out / "figures" / f"curves_{sc}")
@@ -341,7 +351,7 @@ def main():
                     stats[(r["variant"], pname, k)].append(float(v))
     for (var, pname, k), vals in sorted(stats.items()):
         md.append(f"| {var} | {pname} | {k} | {np.mean(vals):.4g} |")
-    md += ["", f"Figures: `{(out / 'figures').relative_to(ROOT)}`; LaTeX tables: `{(out / 'tables').relative_to(ROOT)}`; raw: `{(bench_dir / 'results.json').relative_to(ROOT)}`."]
+    md += ["", f"Figures: `{rel(out / 'figures')}`; LaTeX tables: `{rel(out / 'tables')}`; raw: `{rel(bench_dir / 'results.json')}`."]
     (bench_dir / "REPORT.md").write_text("\n".join(md) + "\n")
     print(bench_dir / "REPORT.md")
 

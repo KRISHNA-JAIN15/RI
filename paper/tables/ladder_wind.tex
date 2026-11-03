@@ -1,0 +1,16 @@
+\begin{table*}[t]
+\centering
+\caption{Ablation ladder on Fruit tree, wind (dynamic)}
+\label{tab:ladder_wind}
+\small
+\begin{tabular}{lrrrrrrrrrrrrr}
+\toprule
+Step & adds & S (\%) & $\Delta$S vs previous & collision (\%) & $\Delta$coll & return & $\Delta$return & train wall (min) & $\Delta$wall & env steps (k) & extra sim steps (k) & plugin time (s) & T infer (ms) \\
+\midrule
+paper\_ddpg & DDPG (paper) & 94.2 $\pm$ 4.4 & -- & 2.4 $\pm$ 1.1 & -- & -30.5 $\pm$ 2.3 & -- & 4.8 $\pm$ 0.4 & -- & 166 & 0 & 0 & 0.74 $\pm$ 0.04 \\
+apf\_only & APF controller only & 81.5 & -- & 4.3 & -- & -65.4 & -- & 4.8 $\pm$ 0.4 & -- & 166 & 0 & 0 & 27.02 $\pm$ 0.51 \\
+shield\_eval & DDPG (paper) + CBF shield at test time (d\_safe 2 cm) & 93.2 $\pm$ 4.2 & -1.1 & 0.0 & -2.4 & -31.6 $\pm$ 2.6 & -1.1 & 4.8 $\pm$ 0.4 & +0.0 & 166 & 0 & 0 & 15.61 $\pm$ 1.58 \\
+shield\_eval\_1cm & DDPG (paper) + CBF shield at test time (d\_safe 1 cm) & 94.9 $\pm$ 4.1 & +0.7 & 0.0 & -2.4 & -30.3 $\pm$ 2.2 & +0.2 & 4.8 $\pm$ 0.4 & +0.0 & 166 & 0 & 0 & 15.44 $\pm$ 1.64 \\
+\bottomrule
+\end{tabular}
+\end{table*}
