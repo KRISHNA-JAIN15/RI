@@ -1,5 +1,6 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
+\usepackage[T1]{fontenc} % needed under XeTeX/tectonic so the class's Times (ptm) fonts resolve; pdflatex does this implicitly
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -29,12 +30,18 @@
 \textit{name of organization (of Aff.)}\\
 City, Country \\
 email address or ORCID}
-% \and
-% \IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
-% \IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
-% \textit{name of organization (of Aff.)}\\
-% City, Country \\
-% email address or ORCID}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
 }
 
 \maketitle
